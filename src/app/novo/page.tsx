@@ -1,8 +1,9 @@
 "use client";
 import { useState, useRef, useCallback } from "react";
+import Link from "next/link";
 import AppLayout from "@/components/layout/AppLayout";
 import type { ClassificacaoIA, Categoria, Qualidade, Angulo, Fundo, Material } from "@/types";
-import { Upload, Sparkles, Save, CheckCircle } from "lucide-react";
+import { Upload, Sparkles, Save, CheckCircle, Package } from "lucide-react";
 
 const CATEGORIAS: Categoria[] = ["cuba","sanitario","flexivel","rejunte","acessorio","outro"];
 const QUALIDADES: Qualidade[] = ["excelente","boa","regular","ruim"];
@@ -102,6 +103,10 @@ export default function NovoProdutoPage() {
     <AppLayout>
       <div className="topbar">
         <h1 className="page-title">Novo Produto</h1>
+        <Link href="/novo/bulk" className="btn btn-outline btn-sm">
+          <Package size={14} />
+          Importar em Lote
+        </Link>
       </div>
 
       <div className="page-content" style={{ maxWidth: 900 }}>

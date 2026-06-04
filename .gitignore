@@ -13,3 +13,5 @@ npm-debug.log*
 # Sistema
 .DS_Store
 Thumbs.db
+
+tsconfig.tsbuildinfo
