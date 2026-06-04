@@ -1,114 +1,168 @@
 # PRD — La Bella Griffe: Sistema de Catálogo de Produtos
 
-**Versão:** 3.0
+**Versão:** 4.0
 **Data:** 2026-06-03
-**Status:** Em produção (v3 Next.js)
+**Status:** Em produção
 **Owner:** Ana Paula Teixeira (anapaula03.leiteteixeira@gmail.com)
+**URL:** https://lbg-next.vercel.app
 
 ---
 
 ## 1. Visão Geral
 
-Sistema web interno para **catalogar, consultar e gerenciar fotos de produtos hidráulicos** da La Bella Griffe (cubas, sanitários, flexíveis, rejunte, acessórios). Substitui o processo manual de organização de fotos em pastas e planilhas Excel.
+Sistema web interno para **catalogar, consultar e gerenciar fotos de produtos hidráulicos** da La Bella Griffe (cubas, sanitários, flexíveis, rejunte, acessórios). Substitui o processo manual de organização em pastas e planilhas Excel.
 
-**URL em produção:** https://lbg-next.vercel.app
+Usuários autenticados por email + senha com três perfis de acesso (admin, editor, viewer).
 
 ---
 
 ## 2. Histórico de Versões
 
-| Versão | Stack | Status | Data |
-|--------|-------|--------|------|
-| v1 — organizer.py | Python CLI + Claude Vision | Concluído | 2026-06-03 |
-| v2 — Streamlit | Python + Supabase + Cloudinary | Substituído | 2026-06-03 |
-| v3 — Next.js | Next.js 14 + TypeScript + Tailwind | **Em produção** | 2026-06-03 |
+| Versão | Entrega | Status | Data |
+|--------|---------|--------|------|
+| v1 — `organizer.py` | Script Python CLI + Claude Vision em lote | Concluído | 2026-06-03 |
+| v2 — Streamlit | App Python + Supabase + Cloudinary | Substituído | 2026-06-03 |
+| v3 — Next.js | App web com auth, galeria, upload IA | Substituído | 2026-06-03 |
+| **v4 — Next.js** | **Multi-foto, revisão, admin de usuários** | **Em produção** | 2026-06-03 |
 
 ---
 
 ## 3. Problema
 
-- Fotos de produtos armazenadas em pastas locais desorganizadas (sem padrão de nomenclatura)
-- Sem forma rápida de buscar um produto por SKU, cor ou categoria
-- A Gabi (designer) e funcionários não tinham acesso centralizado às fotos
-- Cadastro de novos produtos era manual, sem metadados estruturados
-- Impossível saber a qualidade das fotos sem abrir uma a uma
-- Sistema anterior (Streamlit) sem autenticação, sem edição de registros
+- Fotos armazenadas em pastas locais sem padrão, inacessíveis remotamente
+- Sem busca rápida por SKU, cor, categoria ou qualidade
+- Gabi (designer) e funcionários sem acesso centralizado
+- Cadastro de novos produtos manual, sem metadados
+- Impossível saber qualidade das fotos sem abrir individualmente
+- Fotos com classificação incerta não tinham workflow de resolução
+- Sem controle de quem acessa ou edita o sistema
 
 ---
 
-## 4. Solução (v3 — Next.js)
+## 4. Funcionalidades (v4)
 
-Aplicativo web com autenticação por login e 4 páginas:
+### 4.1 Páginas e Rotas
 
-| Rota | Funcionalidade |
-|------|---------------|
-| `/login` | Autenticação por email + senha (bcrypt + JWT) |
-| `/catalogo` | Galeria com filtros, busca, modal de detalhe, skeleton loading |
-| `/novo` | Upload de foto → Claude Vision → revisão → salva no Supabase + Cloudinary |
-| `/editar` | Buscar produto por SKU, editar campos, excluir com confirmação |
-| `/relatorio` | Métricas, gráficos por categoria/qualidade, lista de revisão |
+| Rota | Perfis | Funcionalidade |
+|------|--------|---------------|
+| `/login` | Público | Autenticação por email + senha |
+| `/catalogo` | Todos | Galeria filtrável com modal multi-foto |
+| `/novo` | Admin, Editor | Upload + Claude Vision → Supabase + Cloudinary |
+| `/editar` | Admin, Editor | Buscar produto, editar campos, excluir |
+| `/revisar` | Admin, Editor | Fila de revisão com 4 ações por foto |
+| `/relatorio` | Todos | Métricas, gráficos, exportação CSV |
+| `/admin` | Admin | Gestão de usuários e permissões |
+
+### 4.2 Modal Multi-Foto (Galeria)
+
+Ao clicar em um produto no catálogo:
+- Foto principal grande com setas ← → para navegar
+- Thumbnails clicáveis de **todas as fotos do mesmo SKU** (ordenadas por qualidade)
+- Contador `X / N` no canto da foto
+- Teclado: ← → para navegar, Esc para fechar
+- Cada foto mostra: ângulo, qualidade, fundo, problemas detectados
+- Botão "Revisar esta foto" nas fotos marcadas `precisa_revisao = true`
+- Dados do produto (SKU, nome, categoria, tags, descrição) à direita
+
+### 4.3 Fila de Revisão (`/revisar`)
+
+Fotos marcadas como `precisa_revisao = true` entram na fila. Para cada foto:
+
+| Ação | Efeito |
+|------|--------|
+| 🔗 Atribuir | Vincula ao SKU de outro produto existente |
+| ↺ Reclassificar | Formulário completo para editar todos os campos |
+| ✓ Aprovar | Remove o flag `precisa_revisao`, mantém metadados |
+| ✕ Excluir | Remove da fila e do banco (com confirmação) |
+
+- Paginação: 6 fotos por página
+- Do catálogo: clique no card "Revisão" redireciona para `/revisar`
+- Do modal: botão "Revisar esta foto" leva diretamente para o item
+
+### 4.4 Administração de Usuários (`/admin`)
+
+Exclusivo do perfil admin:
+
+- Listagem de todos os usuários (nome, email, perfil, status, último acesso)
+- Criar usuário: nome, email, senha, perfil
+- Editar usuário: nome, perfil, nova senha (opcional)
+- Ativar / Desativar (bloqueio imediato de acesso)
+- Excluir com confirmação
+- Tabela visual de permissões por perfil
 
 ---
 
-## 5. Usuários
+## 5. Perfis de Acesso (Roles)
 
-| Persona | Email | Acesso |
-|---------|-------|--------|
-| Ana Paula (admin) | anapaula03.leiteteixeira@gmail.com | Full |
-| Gabi (designer) | a definir | Leitura + Upload |
-| Funcionários | a definir | Leitura + Upload |
+| Funcionalidade | Admin | Editor | Visualizador |
+|----------------|-------|--------|--------------|
+| Ver catálogo e relatório | ✅ | ✅ | ✅ |
+| Buscar e filtrar produtos | ✅ | ✅ | ✅ |
+| Abrir modal multi-foto | ✅ | ✅ | ✅ |
+| Exportar CSV | ✅ | ✅ | ✅ |
+| Cadastrar novo produto | ✅ | ✅ | ❌ |
+| Editar produto existente | ✅ | ✅ | ❌ |
+| Revisar e atribuir fotos | ✅ | ✅ | ❌ |
+| Gerenciar usuários | ✅ | ❌ | ❌ |
 
-**Senha padrão admin:** `LBG@2026` (alterar após primeiro acesso)
+**Implementação:** JWT assinado com `role` embutido → middleware verifica na borda (Edge Runtime). Rotas bloqueadas redirecionam para `/catalogo`.
 
 ---
 
-## 6. Stack Técnica (v3)
+## 6. Arquitetura
+
+### Stack
 
 | Camada | Tecnologia | Plano | Custo |
 |--------|-----------|-------|-------|
 | Framework | Next.js 14 (App Router) | — | — |
 | Linguagem | TypeScript 5 | — | — |
-| Estilos | Tailwind CSS 3 | — | — |
+| Estilos | Tailwind CSS 3 + CSS global | — | — |
 | Ícones | Lucide React | — | — |
-| Auth | NextAuth.js 4 + bcrypt | — | — |
-| Banco de dados | Supabase (PostgreSQL) | Free tier | Gratuito |
-| Imagens | Cloudinary CDN | Free (25GB) | Gratuito |
-| IA | Claude Sonnet 4.6 (Anthropic) | Pay-per-use | ~$0.01/foto |
-| Hosting | Vercel | Hobby (free) | Gratuito |
+| Auth | JWT customizado (jose) + bcrypt | — | — |
+| Banco de dados | Supabase (PostgreSQL) | Free | Gratuito |
+| Imagens existentes | GitHub raw files | — | Gratuito |
+| Imagens novas | Cloudinary CDN | Free (25GB) | Gratuito |
+| IA | Claude Sonnet 4.6 | Pay-per-use | ~$0.01/foto |
+| Hosting | Vercel | Hobby | Gratuito |
 | Repositório | GitHub | Public | Gratuito |
 
-**Repositório:** https://github.com/anapaula03leiteteixeira-blip/lbg-next
-**Deploy:** Automático a cada push na branch `main`
+### Estrutura de Arquivos
+
+```
+src/
+├── app/
+│   ├── api/
+│   │   ├── auth/login/         → POST: autentica, gera JWT com role
+│   │   ├── auth/me/            → GET: retorna usuário autenticado
+│   │   ├── auth/signout/       → POST: remove cookie JWT
+│   │   ├── admin/usuarios/     → GET: lista | POST: cria usuário
+│   │   ├── admin/usuarios/[id] → PATCH: edita | DELETE: exclui
+│   │   ├── produtos/           → GET: lista | POST: cria produto
+│   │   ├── produtos/[id]/      → PATCH: edita | DELETE: exclui
+│   │   └── upload/             → POST: Cloudinary + Claude Vision
+│   ├── admin/                  → gestão de usuários (admin only)
+│   ├── catalogo/               → galeria com modal multi-foto
+│   ├── editar/                 → edição de produto
+│   ├── login/                  → tela de autenticação
+│   ├── novo/                   → cadastro com IA
+│   ├── relatorio/              → métricas e gráficos
+│   └── revisar/                → fila de revisão
+├── components/layout/
+│   ├── Sidebar.tsx             → menu filtrado por role + nome/role no footer
+│   └── AppLayout.tsx           → wrapper de layout
+├── lib/
+│   ├── auth.ts                 → NextAuth config (legado, não usado)
+│   └── supabase.ts             → clients anon + service role
+├── middleware.ts               → proteção de rotas por JWT e role
+└── types/index.ts              → Produto, Usuario, Role, AuthUser, etc.
+```
 
 ---
 
-## 7. Arquitetura
+## 7. Banco de Dados (Supabase)
 
-```
-lbg-next/
-├── src/
-│   ├── app/
-│   │   ├── api/
-│   │   │   ├── auth/login/     → autenticação com bcrypt
-│   │   │   ├── auth/signout/   → logout
-│   │   │   ├── produtos/       → CRUD Supabase
-│   │   │   └── upload/         → Cloudinary + Claude Vision
-│   │   ├── catalogo/           → galeria de produtos
-│   │   ├── novo/               → cadastro com IA
-│   │   ├── editar/             → edição e exclusão
-│   │   ├── relatorio/          → métricas e gráficos
-│   │   └── login/              → tela de autenticação
-│   ├── components/layout/      → Sidebar + AppLayout
-│   ├── lib/
-│   │   ├── auth.ts             → NextAuth config + usuários
-│   │   └── supabase.ts         → clients anon + service role
-│   ├── middleware.ts            → proteção de rotas por JWT
-│   └── types/index.ts          → Produto, FiltrosProduto, ClassificacaoIA
-```
-
----
-
-## 8. Tabela `produtos` (Supabase)
+### Tabela `produtos`
 
 | Campo | Tipo | Descrição |
 |-------|------|-----------|
@@ -124,93 +178,146 @@ lbg-next/
 | material_aparente | TEXT | louca/aco_inox/plastico/ceramica/metal/borracha/outro |
 | tags | TEXT[] | Palavras-chave para busca |
 | problemas_foto | TEXT[] | Defeitos detectados pela IA |
-| descricao_marketing | TEXT | Frase para catálogo (gerada por IA) |
+| descricao_marketing | TEXT | Frase para catálogo |
 | descricao_tecnica | TEXT | Especificações técnicas |
-| precisa_revisao | BOOLEAN | Flag de revisão manual |
-| image_url | TEXT | URL Cloudinary ou GitHub |
-| hash_sha256 | TEXT | Hash do arquivo |
-| arquivo_original | TEXT | Nome original |
-| processado_em | TIMESTAMPTZ | Data do processamento |
-| criado_em | TIMESTAMPTZ | Data de inserção |
+| precisa_revisao | BOOLEAN | Flag de revisão pendente |
+| image_url | TEXT | URL Cloudinary ou GitHub raw |
+| hash_sha256 | TEXT | Hash SHA-256 do arquivo |
+| arquivo_original | TEXT | Nome original do arquivo |
+| processado_em | TIMESTAMPTZ | Data de processamento pela IA |
+| criado_em | TIMESTAMPTZ | Data de inserção no banco |
+
+### Tabela `usuarios`
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | BIGSERIAL PK | ID auto-incremento |
+| email | TEXT UNIQUE | E-mail (chave de login) |
+| nome | TEXT | Nome exibido |
+| role | TEXT | admin / editor / viewer |
+| password_hash | TEXT | Bcrypt hash (rounds=10) |
+| ativo | BOOLEAN | Se falso, login bloqueado |
+| criado_em | TIMESTAMPTZ | Data de criação |
+| ultimo_acesso | TIMESTAMPTZ | Atualizado a cada login |
+
+**RLS:** ambas as tabelas têm Row Level Security ativo. `usuarios` bloqueia acesso anon — apenas service role key (server-side) pode ler/escrever.
 
 **Supabase Project ID:** `fjzcypjldbxkcumydyzp`
+
+---
+
+## 8. Autenticação e Segurança
+
+### Fluxo de Login
+
+```
+POST /api/auth/login
+  ↓
+Busca usuário em usuarios (service role key)
+  ↓ (fallback se tabela indisponível)
+Verifica env ADMIN_EMAIL + ADMIN_PASSWORD_HASH
+  ↓
+bcrypt.compare(password, hash)
+  ↓ (ok)
+Atualiza ultimo_acesso no Supabase
+  ↓
+SignJWT({ email, name, role }, expires: 8h)
+  ↓
+Set-Cookie: lbg_token (httpOnly, secure, sameSite=lax)
+```
+
+### Proteção de Rotas (Middleware — Edge Runtime)
+
+```
+Request → middleware.ts
+  ├─ Rota pública (/login, /api/auth/login)? → passa direto
+  ├─ Sem cookie lbg_token? → redireciona /login
+  ├─ JWT inválido ou expirado? → redireciona /login
+  ├─ /admin ou /api/admin + role ≠ admin? → redireciona /catalogo
+  └─ /novo, /editar, /revisar + role = viewer? → redireciona /catalogo
+```
+
+### Variáveis de Ambiente (Vercel)
+
+| Variável | Descrição |
+|----------|-----------|
+| `NEXT_PUBLIC_SUPABASE_URL` | URL pública do projeto Supabase |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave pública (browser) |
+| `SUPABASE_SERVICE_ROLE_KEY` | Chave secreta (server-side, bypass RLS) |
+| `CLOUDINARY_CLOUD` | `dvlxblssx` |
+| `CLOUDINARY_API_KEY` | API Key do Cloudinary |
+| `CLOUDINARY_SECRET` | API Secret do Cloudinary |
+| `ANTHROPIC_API_KEY` | Chave da API Anthropic (Claude Vision) |
+| `NEXTAUTH_SECRET` | Secret JWT (32 bytes base64) |
+| `NEXTAUTH_URL` | `https://lbg-next.vercel.app` |
+| `ADMIN_EMAIL` | Fallback de admin (env var) |
+| `ADMIN_PASSWORD_HASH` | Hash bcrypt do fallback |
+| `ADMIN_NAME` | Nome do fallback |
 
 ---
 
 ## 9. Fluxo de Cadastro de Novo Produto
 
 ```
-Funcionário acessa /novo (requer login)
+Editor acessa /novo (requer login com role editor ou admin)
   ↓
 Upload da foto (JPG/PNG/WebP, máx 10MB)
   ↓
-(Opcional) Informa SKU e categoria
+(Opcional) informa SKU e categoria
   ↓
 Clica "Analisar com IA"
   ↓
-API Route: /api/upload
-  ├── Claude Sonnet 4.6 classifica a imagem
-  └── Retorna JSON com todos os campos
+POST /api/upload:
+  1. Claude Sonnet 4.6 classifica a imagem via Vision API
+  2. Upload para Cloudinary (CDN, URL permanente)
+  Retorna: { classificacao, image_url }
   ↓
-Campos preenchidos automaticamente no formulário
+Formulário preenchido automaticamente
   ↓
-Funcionário revisa e corrige
+Editor revisa e corrige
   ↓
-Clica "Salvar"
-  ↓
-/api/upload:
-  ├── Upload para Cloudinary (CDN, URL permanente)
-  └── INSERT no Supabase via service role key
+POST /api/produtos → INSERT no Supabase
   ↓
 Produto aparece no catálogo instantaneamente
 ```
 
 ---
 
-## 10. Catálogo Inicial Migrado
+## 10. Catálogo Inicial
 
-Processado em 03/06/2026 via script `organizer.py` (Python + Claude Vision):
+Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision):
 
 | Métrica | Valor |
 |---------|-------|
 | Total de fotos | 435 |
 | SKUs únicos | ~85 |
-| Com SKU identificado | 426 (98%) |
-| Para revisão manual | 18 (4%) |
+| Com imagem | 435/435 (100%) |
+| Para revisão | 18 |
 | Imagens hospedadas | GitHub raw (13.4 MB) |
+| Banco | Supabase (`produtos`) |
 
 ---
 
-## 11. Variáveis de Ambiente (Vercel)
+## 11. Bugs Corrigidos
 
-| Variável | Descrição |
-|----------|-----------|
-| `NEXT_PUBLIC_SUPABASE_URL` | URL do projeto Supabase |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Chave pública (browser) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Chave secreta (server-side) |
-| `CLOUDINARY_CLOUD` | `dvlxblssx` |
-| `CLOUDINARY_API_KEY` | API Key do Cloudinary |
-| `CLOUDINARY_SECRET` | API Secret do Cloudinary |
-| `ANTHROPIC_API_KEY` | Chave da API Anthropic |
-| `NEXTAUTH_SECRET` | Secret JWT (32 bytes base64) |
-| `NEXTAUTH_URL` | `https://lbg-next.vercel.app` |
-| `ADMIN_EMAIL` | Email do admin |
-| `ADMIN_PASSWORD_HASH` | Hash bcrypt da senha |
-| `ADMIN_NAME` | Nome exibido |
-
-Para adicionar múltiplos usuários:
-```
-ADMIN_USERS=[{"email":"gabi@...","password":"$2a$10$...","name":"Gabi"}]
-```
+| Bug | Arquivo | Versão |
+|-----|---------|--------|
+| `file.name.rsplit` (método Python, não existe em JS) | `api/upload/route.ts` | v3→v4 |
+| Modelo `claude-opus-4-5` (ID inválido) | `api/upload/route.ts` | v3→v4 |
 
 ---
 
-## 12. Bugs Corrigidos na v3
+## 12. Decisões Técnicas
 
-| Bug | Arquivo | Correção |
-|-----|---------|----------|
-| `file.name.rsplit` (método Python inexistente em JS) | `api/upload/route.ts` | Trocado por `file.name.split(".").pop()` |
-| Modelo `claude-opus-4-5` (inválido) | `api/upload/route.ts` | Atualizado para `claude-sonnet-4-6` |
+| Decisão | Motivo |
+|---------|--------|
+| JWT customizado em vez de NextAuth | Controle total do payload (role), sem dependência de OAuth |
+| Middleware no Edge Runtime | Proteção na borda sem cold start, mais rápido |
+| `usuarios` com RLS block_anon | Service role apenas server-side — nunca exposto ao browser |
+| Fallback env vars no login | Transição segura sem downtime ao migrar para Supabase |
+| GitHub para imagens existentes | 435 fotos já comprimidas (13.4 MB), sem custo adicional |
+| Cloudinary para novas fotos | CDN profissional, transformações automáticas (resize, WebP) |
+| Claude Sonnet em vez de Opus | 5x mais barato, qualidade equivalente para classificação de imagens |
 
 ---
 
@@ -218,14 +325,14 @@ ADMIN_USERS=[{"email":"gabi@...","password":"$2a$10$...","name":"Gabi"}]
 
 | Prioridade | Feature | Esforço |
 |-----------|---------|---------|
-| Alta | Adicionar Gabi e funcionários como usuários | Baixo |
-| Alta | Alterar senha padrão do admin | Baixo |
+| Alta | Adicionar Gabi e funcionários via `/admin` | Imediato |
+| Alta | Trocar senha padrão `LBG@2026` | Imediato |
+| Média | Página de detalhe com todas as fotos de um SKU | Médio |
 | Média | Upload de múltiplas fotos de uma vez | Médio |
-| Média | Página de detalhe com todas as fotos do mesmo SKU | Médio |
-| Média | Download de foto em alta resolução | Baixo |
-| Baixa | Notificação por WhatsApp ao cadastrar produto | Médio |
+| Média | Download ZIP de seleção de fotos | Médio |
+| Baixa | Notificação WhatsApp ao cadastrar produto | Médio |
 | Baixa | App mobile com câmera direta | Alto |
 
 ---
 
-*Documento atualizado em 03/06/2026 — La Bella Griffe Catálogo v3.0 (Next.js)*
+*Atualizado em 03/06/2026 — v4.0 | Next.js 14 + Supabase + Cloudinary + Anthropic*
