@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
 import type { Produto, Categoria, Qualidade } from "@/types";
-import { Search, SlidersHorizontal, X, ChevronDown, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
+import { Search, SlidersHorizontal, X, ChevronDown, ChevronLeft, ChevronRight, AlertTriangle, Download } from "lucide-react";
 
 const CATEGORIAS: Categoria[] = ["cuba","sanitario","flexivel","rejunte","acessorio","outro"];
 const QUALIDADES: Qualidade[] = ["excelente","boa","regular","ruim"];
@@ -46,13 +46,43 @@ function ProductModal({
   onClose:   () => void;
   onRevisar: (foto: Produto) => void;
 }) {
-  const [idx, setIdx] = useState(0);
+  const [idx,         setIdx]         = useState(0);
+  const [downloading, setDownloading] = useState(false);
 
-  // Ordenar: melhores fotos primeiro, depois por ângulo
+  // Ordenar: melhores fotos primeiro
   const QUAL_ORDER: Record<string, number> = { excelente:0, boa:1, regular:2, ruim:3 };
   const sorted = [...allPhotos].sort((a, b) =>
     (QUAL_ORDER[a.qualidade_foto ?? "ruim"] ?? 9) - (QUAL_ORDER[b.qualidade_foto ?? "ruim"] ?? 9)
   );
+
+  async function downloadFoto(foto: Produto) {
+    if (!foto.image_url) return;
+    setDownloading(true);
+    try {
+      // Nome do arquivo: SKU-angulo.ext
+      const rawExt  = foto.image_url.split(".").pop()?.split("?")[0]?.toLowerCase() ?? "jpg";
+      const ext     = ["jpg","jpeg","png","webp","gif"].includes(rawExt) ? rawExt : "jpg";
+      const filename = `${foto.sku}-${foto.angulo ?? "foto"}.${ext}`
+        .replace(/[^a-zA-Z0-9.\-_]/g, "-");
+
+      // Usa proxy server-side para evitar CORS
+      const res  = await fetch(`/api/download?url=${encodeURIComponent(foto.image_url)}&filename=${encodeURIComponent(filename)}`);
+      if (!res.ok) throw new Error("Falha no download");
+
+      const blob = await res.blob();
+      const link = document.createElement("a");
+      link.href  = URL.createObjectURL(blob);
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+    } catch {
+      alert("Não foi possível baixar a foto. Tente novamente.");
+    } finally {
+      setDownloading(false);
+    }
+  }
 
   const active = sorted[idx] ?? sorted[0];
   const total  = sorted.length;
@@ -98,6 +128,18 @@ function ProductModal({
                 <AlertTriangle size={13} /> Revisar esta foto
               </button>
             )}
+            {active.image_url && (
+              <button
+                onClick={() => downloadFoto(active)}
+                disabled={downloading}
+                className="btn btn-outline btn-sm"
+                title="Baixar foto selecionada"
+                style={{ display:"flex", alignItems:"center", gap:5 }}
+              >
+                <Download size={14} />
+                {downloading ? "Baixando..." : "Baixar foto"}
+              </button>
+            )}
             <button onClick={onClose} className="btn btn-ghost btn-sm"><X size={18} /></button>
           </div>
         </div>
@@ -132,10 +174,39 @@ function ProductModal({
                       onClick={next} disabled={idx === total - 1}
                       style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.9)", border:"1px solid #e7e5e4", borderRadius:6, padding:"6px", cursor:"pointer", opacity: idx === total - 1 ? 0.3 : 1 }}
                     ><ChevronRight size={18} /></button>
-                    <div style={{ position:"absolute", bottom:8, right:10, background:"rgba(0,0,0,0.55)", color:"white", fontSize:"0.72rem", borderRadius:4, padding:"2px 8px" }}>
+                    <div style={{ position:"absolute", bottom:8, left:"50%", transform:"translateX(-50%)", background:"rgba(0,0,0,0.55)", color:"white", fontSize:"0.72rem", borderRadius:4, padding:"2px 8px" }}>
                       {idx + 1} / {total}
                     </div>
                   </>
+                )}
+
+                {/* Botão de download — canto inferior direito da foto */}
+                {active.image_url && (
+                  <button
+                    onClick={() => downloadFoto(active)}
+                    disabled={downloading}
+                    title={`Baixar foto (${active.sku}-${active.angulo ?? "foto"})`}
+                    style={{
+                      position:   "absolute",
+                      bottom:     8,
+                      right:      8,
+                      background: downloading ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.92)",
+                      border:     "1px solid #e7e5e4",
+                      borderRadius: 6,
+                      padding:    "5px 8px",
+                      cursor:     downloading ? "wait" : "pointer",
+                      display:    "flex",
+                      alignItems: "center",
+                      gap:        4,
+                      fontSize:   "0.7rem",
+                      fontWeight: 600,
+                      color:      downloading ? "white" : "#1c1917",
+                      transition: "background 0.15s",
+                    }}
+                  >
+                    <Download size={13} strokeWidth={2} />
+                    {downloading ? "..." : "Baixar"}
+                  </button>
                 )}
               </div>
 
