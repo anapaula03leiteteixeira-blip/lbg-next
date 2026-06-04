@@ -1,18 +1,36 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Plus, PenLine, BarChart2, AlertTriangle, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
+import { LayoutGrid, Plus, PenLine, BarChart2, AlertTriangle, ShieldCheck, LogOut } from "lucide-react";
+import type { Role } from "@/types";
 
-const links = [
-  { href: "/catalogo", label: "Catálogo",       icon: LayoutGrid    },
-  { href: "/novo",     label: "Novo Produto",   icon: Plus           },
-  { href: "/editar",   label: "Editar Produto", icon: PenLine        },
-  { href: "/revisar",  label: "Revisão",        icon: AlertTriangle  },
-  { href: "/relatorio",label: "Relatório",      icon: BarChart2      },
+interface AuthUser { name: string; email: string; role: Role; }
+
+const ALL_LINKS = [
+  { href: "/catalogo",  label: "Catálogo",      icon: LayoutGrid,    roles: ["admin","editor","viewer"] as Role[] },
+  { href: "/novo",      label: "Novo Produto",   icon: Plus,          roles: ["admin","editor"]           as Role[] },
+  { href: "/editar",    label: "Editar Produto", icon: PenLine,       roles: ["admin","editor"]           as Role[] },
+  { href: "/revisar",   label: "Revisão",        icon: AlertTriangle, roles: ["admin","editor"]           as Role[] },
+  { href: "/relatorio", label: "Relatório",      icon: BarChart2,     roles: ["admin","editor","viewer"]  as Role[] },
+  { href: "/admin",     label: "Usuários",       icon: ShieldCheck,   roles: ["admin"]                    as Role[] },
 ];
+
+const ROLE_LABEL: Record<Role, string> = { admin:"Admin", editor:"Editor", viewer:"Visualizador" };
+const ROLE_COLOR: Record<Role, string> = { admin:"#92400e", editor:"#1e40af", viewer:"#374151" };
 
 export default function Sidebar() {
   const path = usePathname();
+  const [user, setUser] = useState<AuthUser | null>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then(r => r.ok ? r.json() : null)
+      .then(data => data && setUser(data))
+      .catch(() => {});
+  }, []);
+
+  const links = ALL_LINKS.filter(l => !user || l.roles.includes(user.role));
 
   return (
     <aside className="sidebar">
@@ -36,11 +54,19 @@ export default function Sidebar() {
       </nav>
 
       <div className="sidebar-footer">
+        {user && (
+          <div style={{ padding:"0 0.5rem 0.625rem", borderBottom:"1px solid #e7e5e4", marginBottom:"0.5rem" }}>
+            <p style={{ fontSize:"0.8rem", fontWeight:600, color:"#1c1917", margin:0 }}>{user.name}</p>
+            <span style={{ fontSize:"0.7rem", fontWeight:600, color: ROLE_COLOR[user.role] }}>
+              {ROLE_LABEL[user.role]}
+            </span>
+          </div>
+        )}
         <form action="/api/auth/signout" method="POST">
           <button
             type="submit"
             className="nav-link btn-ghost"
-            style={{ width: "100%", background: "none", border: "none", cursor: "pointer", color: "#57534e", fontSize: "0.8rem" }}
+            style={{ width:"100%", background:"none", border:"none", cursor:"pointer", color:"#57534e", fontSize:"0.8rem" }}
           >
             <LogOut size={14} />
             Sair

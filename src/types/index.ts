@@ -1,3 +1,29 @@
+export type Role      = "admin" | "editor" | "viewer";
+
+export interface Usuario {
+  id:            number;
+  email:         string;
+  nome:          string;
+  role:          Role;
+  ativo:         boolean;
+  criado_em:     string;
+  ultimo_acesso?: string;
+}
+
+export interface UsuarioForm {
+  email:    string;
+  nome:     string;
+  role:     Role;
+  password: string;
+  ativo:    boolean;
+}
+
+export interface AuthUser {
+  email: string;
+  name:  string;
+  role:  Role;
+}
+
 export type Qualidade = "excelente" | "boa" | "regular" | "ruim";
 export type Categoria = "cuba" | "sanitario" | "flexivel" | "rejunte" | "acessorio" | "outro";
 export type Angulo    = "frontal" | "lateral" | "superior" | "perspectiva" | "detalhe" | "conjunto" | "embalagem";

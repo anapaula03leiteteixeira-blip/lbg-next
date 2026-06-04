@@ -1,28 +1,39 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const SECRET  = new TextEncoder().encode(process.env.NEXTAUTH_SECRET ?? "change-me");
-const PUBLIC  = ["/login", "/api/auth/login"];
+const SECRET       = new TextEncoder().encode(process.env.NEXTAUTH_SECRET ?? "change-me");
+const PUBLIC       = ["/login", "/api/auth/login"];
+const ADMIN_ONLY   = ["/admin", "/api/admin"];
+const EDITOR_ONLY  = ["/novo", "/editar", "/revisar", "/api/upload"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Rotas públicas
   if (PUBLIC.some(p => pathname.startsWith(p))) return NextResponse.next();
-
-  // Rota raiz → redireciona para catálogo
   if (pathname === "/") return NextResponse.redirect(new URL("/catalogo", req.url));
 
-  // Verifica JWT no cookie
   const token = req.cookies.get("lbg_token")?.value;
   if (!token) return NextResponse.redirect(new URL("/login", req.url));
 
+  let role = "viewer";
   try {
-    await jwtVerify(token, SECRET);
-    return NextResponse.next();
+    const { payload } = await jwtVerify(token, SECRET);
+    role = (payload.role as string) ?? "viewer";
   } catch {
     return NextResponse.redirect(new URL("/login", req.url));
   }
+
+  // /admin → só admin
+  if (ADMIN_ONLY.some(r => pathname.startsWith(r)) && role !== "admin") {
+    return NextResponse.redirect(new URL("/catalogo", req.url));
+  }
+
+  // rotas de edição → admin ou editor
+  if (EDITOR_ONLY.some(r => pathname.startsWith(r)) && role === "viewer") {
+    return NextResponse.redirect(new URL("/catalogo", req.url));
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {
