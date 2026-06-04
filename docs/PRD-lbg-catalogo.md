@@ -1,7 +1,7 @@
 # PRD — La Bella Griffe: Sistema de Catálogo de Produtos
 
-**Versão:** 4.0
-**Data:** 2026-06-03
+**Versão:** 4.1
+**Data:** 2026-06-04
 **Status:** Em produção
 **Owner:** Ana Paula Teixeira (anapaula03.leiteteixeira@gmail.com)
 **URL:** https://lbg-next.vercel.app
@@ -23,7 +23,8 @@ Usuários autenticados por email + senha com três perfis de acesso (admin, edit
 | v1 — `organizer.py` | Script Python CLI + Claude Vision em lote | Concluído | 2026-06-03 |
 | v2 — Streamlit | App Python + Supabase + Cloudinary | Substituído | 2026-06-03 |
 | v3 — Next.js | App web com auth, galeria, upload IA | Substituído | 2026-06-03 |
-| **v4 — Next.js** | **Multi-foto, revisão, admin de usuários** | **Em produção** | 2026-06-03 |
+| v4 — Next.js | Multi-foto, revisão, admin de usuários | Substituído | 2026-06-03 |
+| **v4.1 — Next.js** | **Download de fotos no carrossel** | **Em produção** | 2026-06-04 |
 
 ---
 
@@ -53,7 +54,25 @@ Usuários autenticados por email + senha com três perfis de acesso (admin, edit
 | `/relatorio` | Todos | Métricas, gráficos, exportação CSV |
 | `/admin` | Admin | Gestão de usuários e permissões |
 
-### 4.2 Modal Multi-Foto (Galeria)
+### 4.2 Download de Fotos
+
+Disponível no modal do produto, em dois pontos de acesso:
+
+| Local | Detalhe |
+|-------|---------|
+| Canto inferior direito da foto | Botão ⬇ "Baixar" sempre visível sobre o carrossel |
+| Header do modal | Botão "Baixar foto" acessível sem rolar |
+
+**Comportamento:**
+- Baixa sempre a foto **ativa** no carrossel no momento do clique
+- Nome automático gerado: `{SKU}-{angulo}.{ext}` (ex: `LBG100IPANEMA-frontal.jpg`)
+- Proxy server-side `/api/download` resolve bloqueio de CORS para GitHub raw e Cloudinary
+- Estado visual "Baixando..." durante o fetch
+- Botão não aparece quando a foto não tem `image_url`
+
+**Segurança do proxy:** valida que a URL de origem pertence aos domínios autorizados (`raw.githubusercontent.com`, `cloudinary.com`, `drive.google.com`). URLs externas retornam 403.
+
+### 4.4 Modal Multi-Foto (Galeria)
 
 Ao clicar em um produto no catálogo:
 - Foto principal grande com setas ← → para navegar
@@ -64,7 +83,7 @@ Ao clicar em um produto no catálogo:
 - Botão "Revisar esta foto" nas fotos marcadas `precisa_revisao = true`
 - Dados do produto (SKU, nome, categoria, tags, descrição) à direita
 
-### 4.3 Fila de Revisão (`/revisar`)
+### 4.5 Fila de Revisão (`/revisar`)
 
 Fotos marcadas como `precisa_revisao = true` entram na fila. Para cada foto:
 
@@ -79,7 +98,7 @@ Fotos marcadas como `precisa_revisao = true` entram na fila. Para cada foto:
 - Do catálogo: clique no card "Revisão" redireciona para `/revisar`
 - Do modal: botão "Revisar esta foto" leva diretamente para o item
 
-### 4.4 Administração de Usuários (`/admin`)
+### 4.6 Administração de Usuários (`/admin`)
 
 Exclusivo do perfil admin:
 
@@ -133,6 +152,7 @@ Exclusivo do perfil admin:
 src/
 ├── app/
 │   ├── api/
+│   │   ├── download/           → GET: proxy de download (resolve CORS)
 │   │   ├── auth/login/         → POST: autentica, gera JWT com role
 │   │   ├── auth/me/            → GET: retorna usuário autenticado
 │   │   ├── auth/signout/       → POST: remove cookie JWT
@@ -335,4 +355,4 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision):
 
 ---
 
-*Atualizado em 03/06/2026 — v4.0 | Next.js 14 + Supabase + Cloudinary + Anthropic*
+*Atualizado em 04/06/2026 — v4.1 | Next.js 14 + Supabase + Cloudinary + Anthropic*
