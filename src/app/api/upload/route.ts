@@ -1,0 +1,104 @@
+import { NextRequest, NextResponse } from "next/server";
+import { v2 as cloudinary } from "cloudinary";
+import Anthropic from "@anthropic-ai/sdk";
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD!,
+  api_key:    process.env.CLOUDINARY_API_KEY!,
+  api_secret: process.env.CLOUDINARY_SECRET!,
+  secure:     true,
+});
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
+
+export async function POST(req: NextRequest) {
+  try {
+    const form     = await req.formData();
+    const file     = form.get("file") as File | null;
+    const skuHint  = (form.get("sku")       as string | null) ?? "";
+    const catHint  = (form.get("categoria") as string | null) ?? "";
+    const nomeHint = (form.get("nome")      as string | null) ?? "";
+
+    if (!file) return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 });
+    if (file.size > 10 * 1024 * 1024) return NextResponse.json({ error: "Arquivo muito grande (máx 10MB)" }, { status: 400 });
+
+    const bytes  = await file.arrayBuffer();
+    const buffer = Buffer.from(bytes);
+    const base64 = buffer.toString("base64");
+
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
+    const mediaMap: Record<string, string> = { jpg:"image/jpeg", jpeg:"image/jpeg", png:"image/png", webp:"image/webp" };
+    const mediaType = (mediaMap[ext] ?? "image/jpeg") as "image/jpeg" | "image/png" | "image/webp";
+
+    // ── 1. Classificar com Claude Vision ─────────────────────────────────────
+    const contextParts: string[] = [];
+    if (skuHint)  contextParts.push(`SKU informado: ${skuHint}`);
+    if (catHint)  contextParts.push(`Categoria informada: ${catHint}`);
+    if (nomeHint) contextParts.push(`Nome informado: ${nomeHint}`);
+    const context = contextParts.join("\n") || "Nenhum contexto adicional.";
+
+    const prompt = `Você é especialista em produtos hidráulicos e de banheiro.
+Analise esta foto e retorne APENAS JSON válido, sem texto adicional.
+
+CONTEXTO:
+${context}
+
+JSON esperado:
+{
+  "sku": "use o informado ou deixe vazio",
+  "nome_produto": "nome comercial completo",
+  "categoria": "cuba|sanitario|flexivel|rejunte|acessorio|outro",
+  "subcategoria": "subcategoria específica",
+  "cor_dominante": "cor principal",
+  "angulo": "frontal|lateral|superior|perspectiva|detalhe|conjunto|embalagem",
+  "fundo": "branco|colorido|ambiente|transparente|outro",
+  "qualidade_foto": "excelente|boa|regular|ruim",
+  "problemas_foto": [],
+  "material_aparente": "louca|aco_inox|plastico|ceramica|metal|borracha|outro",
+  "tags": ["palavras-chave para busca"],
+  "descricao_marketing": "frase atrativa, máx 120 chars",
+  "descricao_tecnica": "descrição técnica objetiva",
+  "precisa_revisao": false
+}`;
+
+    const aiResp = await anthropic.messages.create({
+      model:      "claude-sonnet-4-6",
+      max_tokens: 1200,
+      messages: [{
+        role:    "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+          { type: "text",  text: prompt },
+        ],
+      }],
+    });
+
+    let rawText = aiResp.content[0].type === "text" ? aiResp.content[0].text.trim() : "{}";
+    rawText = rawText.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
+    const classificacao = JSON.parse(rawText);
+
+    // Hint do usuário tem prioridade
+    if (skuHint)  classificacao.sku       = skuHint;
+    if (catHint)  classificacao.categoria = catHint;
+    if (nomeHint) classificacao.nome_produto = nomeHint;
+
+    // ── 2. Upload para Cloudinary ─────────────────────────────────────────────
+    const publicId = `lbg/${classificacao.categoria ?? "outro"}/${(classificacao.sku ?? "produto").replace(/[^a-zA-Z0-9-_]/g, "_")}-${classificacao.angulo ?? "frontal"}-${Date.now()}`;
+
+    const uploadResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
+      cloudinary.uploader.upload_stream(
+        { public_id: publicId, overwrite: false, quality: "auto", fetch_format: "auto" },
+        (err, result) => err ? reject(err) : resolve(result as { secure_url: string }),
+      ).end(buffer);
+    });
+
+    return NextResponse.json({
+      classificacao,
+      image_url: uploadResult.secure_url,
+    });
+
+  } catch (e: unknown) {
+    console.error("Upload/classify error:", e);
+    return NextResponse.json({ error: e instanceof Error ? e.message : "Erro interno" }, { status: 500 });
+  }
+}

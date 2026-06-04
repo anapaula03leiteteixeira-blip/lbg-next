@@ -1,0 +1,15 @@
+# Senhas e segredos — NUNCA subir
+.env.local
+.env*.local
+
+# Next.js build
+.next/
+out/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Sistema
+.DS_Store
+Thumbs.db
