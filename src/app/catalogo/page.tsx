@@ -1,149 +1,259 @@
 "use client";
 import { useState, useEffect, useCallback } from "react";
-import Image from "next/image";
+import { useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
 import type { Produto, Categoria, Qualidade } from "@/types";
-import { Search, SlidersHorizontal, X, ChevronDown } from "lucide-react";
+import { Search, SlidersHorizontal, X, ChevronDown, ChevronLeft, ChevronRight, AlertTriangle } from "lucide-react";
 
 const CATEGORIAS: Categoria[] = ["cuba","sanitario","flexivel","rejunte","acessorio","outro"];
 const QUALIDADES: Qualidade[] = ["excelente","boa","regular","ruim"];
 
 const QUAL_BADGE: Record<string, string> = {
-  excelente: "badge-excelente",
-  boa:       "badge-boa",
-  regular:   "badge-regular",
-  ruim:      "badge-ruim",
+  excelente: "badge-excelente", boa: "badge-boa",
+  regular:   "badge-regular",   ruim: "badge-ruim",
 };
 const QUAL_DOT: Record<string, string> = {
-  excelente:"🟢", boa:"🔵", regular:"🟡", ruim:"🔴",
+  excelente: "🟢", boa: "🔵", regular: "🟡", ruim: "🔴",
 };
+
+function imgUrl(url: string | undefined, w = 600) {
+  if (!url) return null;
+  if (url.includes("cloudinary.com")) return url.replace("/upload/", `/upload/w_${w},q_auto,f_auto/`);
+  return url;
+}
 
 function SkeletonCard() {
   return (
-    <div style={{ background: "white", border: "1px solid #e7e5e4", borderRadius: 8, overflow: "hidden" }}>
-      <div className="skeleton" style={{ height: 165 }} />
-      <div style={{ padding: "0.875rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-        <div className="skeleton" style={{ height: 10, width: "40%" }} />
-        <div className="skeleton" style={{ height: 14, width: "80%" }} />
-        <div className="skeleton" style={{ height: 12, width: "55%" }} />
+    <div style={{ background:"white", border:"1px solid #e7e5e4", borderRadius:8, overflow:"hidden" }}>
+      <div className="skeleton" style={{ height:165 }} />
+      <div style={{ padding:"0.875rem", display:"flex", flexDirection:"column", gap:"0.5rem" }}>
+        <div className="skeleton" style={{ height:10, width:"40%" }} />
+        <div className="skeleton" style={{ height:14, width:"80%" }} />
+        <div className="skeleton" style={{ height:12, width:"55%" }} />
       </div>
     </div>
   );
 }
 
-function ProductModal({ product, onClose }: { product: Produto; onClose: () => void }) {
+// ─── Modal com galeria multi-foto ────────────────────────────────────────────
+
+function ProductModal({
+  allPhotos,
+  onClose,
+  onRevisar,
+}: {
+  allPhotos: Produto[];
+  onClose:   () => void;
+  onRevisar: (foto: Produto) => void;
+}) {
+  const [idx, setIdx] = useState(0);
+
+  // Ordenar: melhores fotos primeiro, depois por ângulo
+  const QUAL_ORDER: Record<string, number> = { excelente:0, boa:1, regular:2, ruim:3 };
+  const sorted = [...allPhotos].sort((a, b) =>
+    (QUAL_ORDER[a.qualidade_foto ?? "ruim"] ?? 9) - (QUAL_ORDER[b.qualidade_foto ?? "ruim"] ?? 9)
+  );
+
+  const active = sorted[idx] ?? sorted[0];
+  const total  = sorted.length;
+
+  const prev = useCallback(() => setIdx(i => Math.max(0, i - 1)), []);
+  const next = useCallback(() => setIdx(i => Math.min(total - 1, i + 1)), [total]);
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft")  prev();
+      if (e.key === "ArrowRight") next();
+      if (e.key === "Escape")     onClose();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [prev, next, onClose]);
+
+  if (!active) return null;
+
+  // Dados do produto (produto-nível, da melhor foto)
+  const rep = sorted[0];
+
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={e => e.stopPropagation()}>
+      <div
+        className="modal"
+        style={{ maxWidth: 860, width: "95vw" }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Header */}
         <div className="modal-header">
           <div>
-            <p className="product-sku">{product.sku}</p>
-            <h2 className="text-display" style={{ fontSize: "1.3rem", fontWeight: 500 }}>{product.nome_produto}</h2>
+            <p className="product-sku">{rep.sku}</p>
+            <h2 className="text-display" style={{ fontSize:"1.2rem", fontWeight:500 }}>{rep.nome_produto}</h2>
           </div>
-          <button onClick={onClose} className="btn btn-ghost btn-sm">
-            <X size={18} />
-          </button>
+          <div style={{ display:"flex", gap:"0.5rem", alignItems:"center" }}>
+            {active.precisa_revisao && (
+              <button
+                onClick={() => onRevisar(active)}
+                className="btn btn-sm"
+                style={{ background:"#fef3c7", color:"#92400e", border:"1px solid #fcd34d", fontWeight:600 }}
+              >
+                <AlertTriangle size={13} /> Revisar esta foto
+              </button>
+            )}
+            <button onClick={onClose} className="btn btn-ghost btn-sm"><X size={18} /></button>
+          </div>
         </div>
-        <div className="modal-body">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1.5rem" }}>
-            {/* Imagem */}
+
+        <div className="modal-body" style={{ padding: "1rem 1.5rem 1.5rem" }}>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1.5rem" }}>
+
+            {/* Coluna esquerda — foto principal + thumbnails */}
             <div>
-              {product.image_url ? (
-                <img
-                  src={product.image_url.includes("cloudinary.com")
-                    ? product.image_url.replace("/upload/", "/upload/w_600,q_auto,f_auto/")
-                    : product.image_url}
-                  alt={product.nome_produto}
-                  style={{ width: "100%", borderRadius: 8, border: "1px solid #e7e5e4" }}
-                />
-              ) : (
-                <div style={{ background: "#f5f5f4", borderRadius: 8, height: 220, display: "flex", alignItems: "center", justifyContent: "center", color: "#a8a29e" }}>
-                  Sem imagem
+              {/* Foto principal com navegação */}
+              <div style={{ position:"relative", borderRadius:8, overflow:"hidden", background:"#f5f5f4", border:"1px solid #e7e5e4" }}>
+                {imgUrl(active.image_url) ? (
+                  <img
+                    src={imgUrl(active.image_url, 600)!}
+                    alt={active.nome_produto}
+                    style={{ width:"100%", display:"block", maxHeight:320, objectFit:"contain" }}
+                  />
+                ) : (
+                  <div style={{ height:280, display:"flex", alignItems:"center", justifyContent:"center", color:"#a8a29e" }}>
+                    📷 Sem imagem
+                  </div>
+                )}
+
+                {/* Overlay prev/next */}
+                {total > 1 && (
+                  <>
+                    <button
+                      onClick={prev} disabled={idx === 0}
+                      style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.9)", border:"1px solid #e7e5e4", borderRadius:6, padding:"6px", cursor:"pointer", opacity: idx === 0 ? 0.3 : 1 }}
+                    ><ChevronLeft size={18} /></button>
+                    <button
+                      onClick={next} disabled={idx === total - 1}
+                      style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.9)", border:"1px solid #e7e5e4", borderRadius:6, padding:"6px", cursor:"pointer", opacity: idx === total - 1 ? 0.3 : 1 }}
+                    ><ChevronRight size={18} /></button>
+                    <div style={{ position:"absolute", bottom:8, right:10, background:"rgba(0,0,0,0.55)", color:"white", fontSize:"0.72rem", borderRadius:4, padding:"2px 8px" }}>
+                      {idx + 1} / {total}
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Thumbnails strip */}
+              {total > 1 && (
+                <div style={{ display:"flex", gap:"0.5rem", marginTop:"0.625rem", overflowX:"auto", paddingBottom:4 }}>
+                  {sorted.map((foto, i) => (
+                    <button
+                      key={foto.id}
+                      onClick={() => setIdx(i)}
+                      title={foto.angulo ?? ""}
+                      style={{
+                        flexShrink: 0,
+                        width: 60, height: 60,
+                        borderRadius: 6,
+                        overflow: "hidden",
+                        border: i === idx ? "2px solid #b45309" : "2px solid transparent",
+                        cursor: "pointer",
+                        padding: 0,
+                        background: "#f5f5f4",
+                        position: "relative",
+                      }}
+                    >
+                      {imgUrl(foto.image_url, 120)
+                        ? <img src={imgUrl(foto.image_url, 120)!} alt={foto.angulo ?? ""} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                        : <span style={{ fontSize:"1.25rem", display:"flex", alignItems:"center", justifyContent:"center", height:"100%" }}>📷</span>
+                      }
+                      {foto.precisa_revisao && (
+                        <span style={{ position:"absolute", top:2, right:2, fontSize:"0.6rem" }}>⚠️</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Info desta foto específica */}
+              <div style={{ marginTop:"0.75rem", display:"flex", flexWrap:"wrap", gap:"0.375rem", alignItems:"center" }}>
+                {active.angulo && <span className="badge badge-cat" style={{ textTransform:"capitalize" }}>📐 {active.angulo}</span>}
+                {active.fundo  && <span className="badge badge-cat" style={{ textTransform:"capitalize" }}>🎨 {active.fundo}</span>}
+                {active.qualidade_foto && (
+                  <span className={`badge ${QUAL_BADGE[active.qualidade_foto]}`}>
+                    {QUAL_DOT[active.qualidade_foto]} {active.qualidade_foto}
+                  </span>
+                )}
+                {active.precisa_revisao && <span className="badge badge-revisao">⚠️ Revisão pendente</span>}
+              </div>
+
+              {active.problemas_foto && active.problemas_foto.length > 0 && (
+                <div className="alert alert-warning" style={{ marginTop:"0.75rem" }}>
+                  <AlertTriangle size={14} />
+                  <div>
+                    <strong>Problemas:</strong>{" "}
+                    {active.problemas_foto.join(", ")}
+                  </div>
                 </div>
               )}
             </div>
-            {/* Dados */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
+
+            {/* Coluna direita — dados do produto */}
+            <div style={{ display:"flex", flexDirection:"column", gap:"0.875rem" }}>
               {[
-                ["Categoria",    product.categoria],
-                ["Subcategoria", product.subcategoria],
-                ["Cor",         product.cor_dominante],
-                ["Ângulo",      product.angulo],
-                ["Fundo",       product.fundo],
-                ["Material",    product.material_aparente],
+                ["Categoria",   rep.categoria],
+                ["Subcategoria",rep.subcategoria],
+                ["Cor",         rep.cor_dominante],
+                ["Material",    rep.material_aparente],
               ].map(([label, val]) => val ? (
                 <div key={label}>
-                  <p style={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.1em", color: "#78716c", marginBottom: 2 }}>{label}</p>
-                  <p style={{ fontSize: "0.875rem", textTransform: "capitalize" }}>{val}</p>
+                  <p style={{ fontSize:"0.65rem", textTransform:"uppercase", letterSpacing:"0.1em", color:"#78716c", marginBottom:2 }}>{label}</p>
+                  <p style={{ fontSize:"0.875rem", textTransform:"capitalize" }}>{val}</p>
                 </div>
               ) : null)}
 
-              {product.qualidade_foto && (
+              {rep.tags && rep.tags.length > 0 && (
                 <div>
-                  <p style={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.1em", color: "#78716c", marginBottom: 4 }}>Qualidade</p>
-                  <span className={`badge ${QUAL_BADGE[product.qualidade_foto]}`}>
-                    {QUAL_DOT[product.qualidade_foto]} {product.qualidade_foto}
-                  </span>
+                  <p style={{ fontSize:"0.65rem", textTransform:"uppercase", letterSpacing:"0.1em", color:"#78716c", marginBottom:"0.4rem" }}>Tags</p>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:"0.3rem" }}>
+                    {rep.tags.map(t => <span key={t} className="badge badge-cat">{t}</span>)}
+                  </div>
                 </div>
               )}
 
-              {product.precisa_revisao && (
-                <span className="badge badge-revisao">⚠️ Precisa revisão</span>
+              {rep.descricao_marketing && (
+                <div style={{ padding:"0.875rem 1rem", background:"#fafaf9", borderRadius:8, borderLeft:"3px solid #b45309" }}>
+                  <p style={{ fontStyle:"italic", fontSize:"0.875rem", color:"#44403c", lineHeight:1.6 }}>{rep.descricao_marketing}</p>
+                </div>
               )}
+
+              {rep.descricao_tecnica && (
+                <div>
+                  <p style={{ fontSize:"0.65rem", textTransform:"uppercase", letterSpacing:"0.1em", color:"#78716c", marginBottom:4 }}>Descrição Técnica</p>
+                  <p style={{ fontSize:"0.85rem", color:"#57534e", lineHeight:1.6 }}>{rep.descricao_tecnica}</p>
+                </div>
+              )}
+
+              <div style={{ marginTop:"auto", paddingTop:"0.5rem", borderTop:"1px solid #f5f5f4", fontSize:"0.72rem", color:"#a8a29e" }}>
+                {total} foto{total !== 1 ? "s" : ""} · Use ← → ou clique nos thumbnails
+              </div>
             </div>
           </div>
-
-          {product.tags && product.tags.length > 0 && (
-            <div style={{ marginTop: "1.25rem" }}>
-              <p style={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.1em", color: "#78716c", marginBottom: "0.5rem" }}>Tags</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.375rem" }}>
-                {product.tags.map(t => (
-                  <span key={t} className="badge badge-cat">{t}</span>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {product.descricao_marketing && (
-            <div style={{ marginTop: "1.25rem", padding: "1rem", background: "#fafaf9", borderRadius: 8, borderLeft: "3px solid #b45309" }}>
-              <p style={{ fontStyle: "italic", fontSize: "0.9rem", color: "#44403c" }}>{product.descricao_marketing}</p>
-            </div>
-          )}
-
-          {product.descricao_tecnica && (
-            <div style={{ marginTop: "0.875rem" }}>
-              <p style={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.1em", color: "#78716c", marginBottom: 4 }}>Descrição Técnica</p>
-              <p style={{ fontSize: "0.85rem", color: "#57534e" }}>{product.descricao_tecnica}</p>
-            </div>
-          )}
-
-          {product.problemas_foto && product.problemas_foto.length > 0 && (
-            <div className="alert alert-warning" style={{ marginTop: "1rem" }}>
-              <span>⚠️</span>
-              <div>
-                <strong>Problemas na foto:</strong>
-                <ul style={{ marginTop: 4, paddingLeft: "1rem" }}>
-                  {product.problemas_foto.map(p => <li key={p} style={{ fontSize: "0.85rem" }}>{p}</li>)}
-                </ul>
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
   );
 }
 
+// ─── Página principal ────────────────────────────────────────────────────────
+
 export default function CatalogoPage() {
-  const [produtos,      setProdutos]      = useState<Produto[]>([]);
-  const [loading,       setLoading]       = useState(true);
-  const [search,        setSearch]        = useState("");
-  const [catSel,        setCatSel]        = useState<Categoria[]>([]);
-  const [qualSel,       setQualSel]       = useState<Qualidade[]>([]);
-  const [revisaoOnly,   setRevisaoOnly]   = useState(false);
-  const [selected,      setSelected]      = useState<Produto | null>(null);
-  const [showFilters,   setShowFilters]   = useState(false);
-  const [viewMode,      setViewMode]      = useState<"grid"|"table">("grid");
+  const router = useRouter();
+  const [produtos,    setProdutos]    = useState<Produto[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [search,      setSearch]      = useState("");
+  const [catSel,      setCatSel]      = useState<Categoria[]>([]);
+  const [qualSel,     setQualSel]     = useState<Qualidade[]>([]);
+  const [revisaoOnly, setRevisaoOnly] = useState(false);
+  const [selectedSku, setSelectedSku] = useState<string | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
+  const [viewMode,    setViewMode]    = useState<"grid"|"table">("grid");
 
   useEffect(() => {
     fetch("/api/produtos")
@@ -152,12 +262,11 @@ export default function CatalogoPage() {
       .catch(() => setLoading(false));
   }, []);
 
-  // Filtragem client-side (rápido, catálogo interno pequeno)
   const filtered = produtos.filter(p => {
     if (search) {
       const s = search.toLowerCase();
-      const haystack = [p.sku, p.nome_produto, p.subcategoria, p.cor_dominante, ...(p.tags ?? [])].join(" ").toLowerCase();
-      if (!haystack.includes(s)) return false;
+      const hay = [p.sku, p.nome_produto, p.subcategoria, p.cor_dominante, ...(p.tags ?? [])].join(" ").toLowerCase();
+      if (!hay.includes(s)) return false;
     }
     if (catSel.length  && !catSel.includes(p.categoria))       return false;
     if (qualSel.length && p.qualidade_foto && !qualSel.includes(p.qualidade_foto)) return false;
@@ -165,7 +274,7 @@ export default function CatalogoPage() {
     return true;
   });
 
-  // Melhor foto por SKU
+  // Melhor foto por SKU para o card
   const QUAL_ORDER: Record<string, number> = { excelente:0, boa:1, regular:2, ruim:3 };
   const bySkuMap = new Map<string, Produto>();
   for (const p of filtered) {
@@ -176,32 +285,32 @@ export default function CatalogoPage() {
   }
   const unique = Array.from(bySkuMap.values());
 
-  const n_revisao = filtered.filter(p => p.precisa_revisao).length;
+  // Todas as fotos do SKU selecionado (busca em TODOS os produtos, não só filtrados)
+  const modalPhotos = selectedSku
+    ? produtos.filter(p => p.sku === selectedSku)
+    : [];
 
-  function toggleCat(c: Categoria) {
-    setCatSel(prev => prev.includes(c) ? prev.filter(x => x !== c) : [...prev, c]);
-  }
-  function toggleQual(q: Qualidade) {
-    setQualSel(prev => prev.includes(q) ? prev.filter(x => x !== q) : [...prev, q]);
-  }
+  const n_revisao = produtos.filter(p => p.precisa_revisao).length;
+
+  function toggleCat(c: Categoria)  { setCatSel(prev  => prev.includes(c)  ? prev.filter(x => x !== c)  : [...prev, c]);  }
+  function toggleQual(q: Qualidade) { setQualSel(prev  => prev.includes(q)  ? prev.filter(x => x !== q)  : [...prev, q]);  }
   const clearFilters = () => { setSearch(""); setCatSel([]); setQualSel([]); setRevisaoOnly(false); };
   const hasFilters = search || catSel.length || qualSel.length || revisaoOnly;
 
   return (
     <AppLayout>
-      {/* Topbar */}
       <div className="topbar">
         <h1 className="page-title">Catálogo</h1>
-        <div style={{ display: "flex", gap: "0.5rem" }}>
+        <div style={{ display:"flex", gap:"0.5rem" }}>
           <button
-            className={`btn btn-outline btn-sm ${viewMode === "grid" ? "btn-primary" : ""}`}
+            className="btn btn-outline btn-sm"
             onClick={() => setViewMode("grid")}
-            style={viewMode === "grid" ? { background: "#1c1917", color: "white" } : {}}
+            style={viewMode === "grid" ? { background:"#1c1917", color:"white" } : {}}
           >⊞ Grade</button>
           <button
-            className={`btn btn-outline btn-sm ${viewMode === "table" ? "btn-primary" : ""}`}
+            className="btn btn-outline btn-sm"
             onClick={() => setViewMode("table")}
-            style={viewMode === "table" ? { background: "#1c1917", color: "white" } : {}}
+            style={viewMode === "table" ? { background:"#1c1917", color:"white" } : {}}
           >☰ Lista</button>
         </div>
       </div>
@@ -210,14 +319,24 @@ export default function CatalogoPage() {
         {/* Métricas */}
         <div className="metrics-grid">
           {[
-            ["Produtos", unique.length],
-            ["Fotos",    filtered.length],
+            ["Produtos",   unique.length],
+            ["Fotos",      filtered.length],
             ["Categorias", new Set(filtered.map(p => p.categoria)).size],
-            ["Revisão",  n_revisao],
+            ["Revisão",    n_revisao],
           ].map(([label, val]) => (
-            <div className="metric-card" key={label as string}>
+            <div
+              key={label as string}
+              className="metric-card"
+              style={(label === "Revisão" && (val as number) > 0) ? { borderLeft:"3px solid #f59e0b", cursor:"pointer" } : {}}
+              onClick={() => label === "Revisão" && (val as number) > 0 && router.push("/revisar")}
+            >
               <div className="metric-label">{label}</div>
-              <div className="metric-value">{val}</div>
+              <div className="metric-value" style={label === "Revisão" && (val as number) > 0 ? { color:"#b45309" } : {}}>
+                {val}
+              </div>
+              {label === "Revisão" && (val as number) > 0 && (
+                <div style={{ fontSize:"0.65rem", color:"#b45309", marginTop:2 }}>Clique para revisar →</div>
+              )}
             </div>
           ))}
         </div>
@@ -233,98 +352,87 @@ export default function CatalogoPage() {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-
           <button className="btn btn-outline btn-sm" onClick={() => setShowFilters(f => !f)}>
-            <SlidersHorizontal size={14} /> Filtros {(catSel.length + qualSel.length) > 0 && `(${catSel.length + qualSel.length})`}
-            <ChevronDown size={13} style={{ transform: showFilters ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }} />
+            <SlidersHorizontal size={14} /> Filtros
+            {(catSel.length + qualSel.length) > 0 && ` (${catSel.length + qualSel.length})`}
+            <ChevronDown size={13} style={{ transform: showFilters ? "rotate(180deg)" : undefined, transition:"transform 0.2s" }} />
           </button>
-
-          {revisaoOnly && (
-            <span className="badge badge-revisao">⚠️ Só revisão</span>
-          )}
           {hasFilters && (
             <button className="btn btn-ghost btn-sm" onClick={clearFilters}>
-              <X size={13} /> Limpar filtros
+              <X size={13} /> Limpar
             </button>
           )}
         </div>
 
-        {/* Painel de filtros expandível */}
         {showFilters && (
-          <div style={{ background: "white", border: "1px solid #e7e5e4", borderRadius: 8, padding: "1rem 1.25rem", marginBottom: "1.25rem", display: "flex", gap: "2rem", flexWrap: "wrap" }}>
+          <div style={{ background:"white", border:"1px solid #e7e5e4", borderRadius:8, padding:"1rem 1.25rem", marginBottom:"1.25rem", display:"flex", gap:"2rem", flexWrap:"wrap" }}>
             <div>
-              <p style={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.1em", color: "#78716c", marginBottom: "0.5rem" }}>Categoria</p>
-              <div style={{ display: "flex", gap: "0.375rem", flexWrap: "wrap" }}>
+              <p style={{ fontSize:"0.65rem", textTransform:"uppercase", letterSpacing:"0.1em", color:"#78716c", marginBottom:"0.5rem" }}>Categoria</p>
+              <div style={{ display:"flex", gap:"0.375rem", flexWrap:"wrap" }}>
                 {CATEGORIAS.map(c => (
-                  <button
-                    key={c}
-                    onClick={() => toggleCat(c)}
-                    className={`badge badge-cat`}
-                    style={{ cursor: "pointer", border: catSel.includes(c) ? "1.5px solid #b45309" : "1px solid #e7e5e4", background: catSel.includes(c) ? "#fef3c7" : "#f5f5f4", color: catSel.includes(c) ? "#92400e" : "#44403c", textTransform: "capitalize" }}
+                  <button key={c} onClick={() => toggleCat(c)} className="badge badge-cat"
+                    style={{ cursor:"pointer", border: catSel.includes(c) ? "1.5px solid #b45309" : "1px solid #e7e5e4", background: catSel.includes(c) ? "#fef3c7" : "#f5f5f4", color: catSel.includes(c) ? "#92400e" : "#44403c", textTransform:"capitalize" }}
                   >{c}</button>
                 ))}
               </div>
             </div>
             <div>
-              <p style={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.1em", color: "#78716c", marginBottom: "0.5rem" }}>Qualidade</p>
-              <div style={{ display: "flex", gap: "0.375rem" }}>
+              <p style={{ fontSize:"0.65rem", textTransform:"uppercase", letterSpacing:"0.1em", color:"#78716c", marginBottom:"0.5rem" }}>Qualidade</p>
+              <div style={{ display:"flex", gap:"0.375rem" }}>
                 {QUALIDADES.map(q => (
-                  <button
-                    key={q}
-                    onClick={() => toggleQual(q)}
-                    className={`badge ${QUAL_BADGE[q]}`}
-                    style={{ cursor: "pointer", opacity: qualSel.length && !qualSel.includes(q) ? 0.4 : 1, textTransform: "capitalize" }}
+                  <button key={q} onClick={() => toggleQual(q)} className={`badge ${QUAL_BADGE[q]}`}
+                    style={{ cursor:"pointer", opacity: qualSel.length && !qualSel.includes(q) ? 0.4 : 1, textTransform:"capitalize" }}
                   >{QUAL_DOT[q]} {q}</button>
                 ))}
               </div>
             </div>
             <div>
-              <p style={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.1em", color: "#78716c", marginBottom: "0.5rem" }}>Status</p>
-              <button
-                onClick={() => setRevisaoOnly(r => !r)}
-                className="badge badge-revisao"
-                style={{ cursor: "pointer", opacity: revisaoOnly ? 1 : 0.5 }}
+              <p style={{ fontSize:"0.65rem", textTransform:"uppercase", letterSpacing:"0.1em", color:"#78716c", marginBottom:"0.5rem" }}>Status</p>
+              <button onClick={() => setRevisaoOnly(r => !r)} className="badge badge-revisao"
+                style={{ cursor:"pointer", opacity: revisaoOnly ? 1 : 0.5 }}
               >⚠️ Precisam revisão</button>
             </div>
           </div>
         )}
 
-        {/* Grid de produtos */}
+        {/* Grid */}
         {loading ? (
           <div className="product-grid">
-            {Array.from({ length: 12 }).map((_, i) => <SkeletonCard key={i} />)}
+            {Array.from({ length:12 }).map((_, i) => <SkeletonCard key={i} />)}
           </div>
         ) : unique.length === 0 ? (
-          <div style={{ textAlign: "center", padding: "4rem", color: "#78716c" }}>
-            <div style={{ fontSize: "2rem", marginBottom: "0.75rem" }}>🔍</div>
-            <p style={{ fontFamily: "var(--font-display)", fontSize: "1.2rem" }}>Nenhum produto encontrado</p>
-            <p style={{ fontSize: "0.875rem", marginTop: "0.5rem" }}>Tente outros termos ou limpe os filtros</p>
+          <div style={{ textAlign:"center", padding:"4rem", color:"#78716c" }}>
+            <div style={{ fontSize:"2rem", marginBottom:"0.75rem" }}>🔍</div>
+            <p style={{ fontFamily:"var(--font-display)", fontSize:"1.2rem" }}>Nenhum produto encontrado</p>
+            <p style={{ fontSize:"0.875rem", marginTop:"0.5rem" }}>Tente outros termos ou limpe os filtros</p>
           </div>
         ) : viewMode === "grid" ? (
           <div className="product-grid">
             {unique.map(p => {
-              const imgSrc = p.image_url
-                ? p.image_url.includes("cloudinary.com")
-                  ? p.image_url.replace("/upload/", "/upload/w_400,q_auto,f_auto/")
-                  : p.image_url
-                : null;
+              const src = imgUrl(p.image_url, 400);
+              const nFotos = produtos.filter(x => x.sku === p.sku).length;
+              const temRevisao = produtos.some(x => x.sku === p.sku && x.precisa_revisao);
               return (
-                <div key={p.id} className="product-card" onClick={() => setSelected(p)}>
-                  {imgSrc
-                    ? <img src={imgSrc} alt={p.nome_produto} className="product-img" loading="lazy" />
+                <div
+                  key={p.id}
+                  className="product-card"
+                  style={temRevisao ? { borderColor:"#fcd34d" } : {}}
+                  onClick={() => setSelectedSku(p.sku)}
+                >
+                  {src
+                    ? <img src={src} alt={p.nome_produto} className="product-img" loading="lazy" />
                     : <div className="product-img-placeholder">📷 Sem imagem</div>
                   }
                   <div className="product-info">
-                    <div className="product-sku">{p.sku}</div>
+                    <div className="product-sku" style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+                      <span>{p.sku}</span>
+                      {nFotos > 1 && <span style={{ fontSize:"0.65rem", color:"#78716c", background:"#f5f5f4", borderRadius:4, padding:"1px 5px" }}>{nFotos} fotos</span>}
+                    </div>
                     <div className="product-name">{p.nome_produto}</div>
                     <div className="product-meta">
-                      <span className="badge badge-cat" style={{ textTransform: "capitalize" }}>{p.categoria}</span>
-                      {p.qualidade_foto && (
-                        <span className={`badge ${QUAL_BADGE[p.qualidade_foto]}`}>
-                          {QUAL_DOT[p.qualidade_foto]} {p.qualidade_foto}
-                        </span>
-                      )}
-                      {p.precisa_revisao && <span className="badge badge-revisao">⚠️</span>}
+                      <span className="badge badge-cat" style={{ textTransform:"capitalize" }}>{p.categoria}</span>
+                      {p.qualidade_foto && <span className={`badge ${QUAL_BADGE[p.qualidade_foto]}`}>{QUAL_DOT[p.qualidade_foto]} {p.qualidade_foto}</span>}
+                      {temRevisao && <span className="badge badge-revisao">⚠️</span>}
                     </div>
                   </div>
                 </div>
@@ -332,31 +440,43 @@ export default function CatalogoPage() {
             })}
           </div>
         ) : (
-          <div style={{ background: "white", border: "1px solid #e7e5e4", borderRadius: 8, overflow: "hidden" }}>
+          <div style={{ background:"white", border:"1px solid #e7e5e4", borderRadius:8, overflow:"hidden" }}>
             <table className="data-table">
               <thead>
-                <tr>
-                  {["SKU","Nome","Categoria","Cor","Qualidade","Revisão"].map(h => <th key={h}>{h}</th>)}
-                </tr>
+                <tr>{["SKU","Nome","Categoria","Cor","Qualidade","Fotos","Revisão"].map(h => <th key={h}>{h}</th>)}</tr>
               </thead>
               <tbody>
-                {unique.map(p => (
-                  <tr key={p.id} onClick={() => setSelected(p)} style={{ cursor: "pointer" }}>
-                    <td><code style={{ fontSize: "0.8rem" }}>{p.sku}</code></td>
-                    <td style={{ fontWeight: 500 }}>{p.nome_produto}</td>
-                    <td style={{ textTransform: "capitalize" }}>{p.categoria}</td>
-                    <td>{p.cor_dominante ?? "—"}</td>
-                    <td>{p.qualidade_foto ? <span className={`badge ${QUAL_BADGE[p.qualidade_foto]}`}>{p.qualidade_foto}</span> : "—"}</td>
-                    <td>{p.precisa_revisao ? "⚠️ Sim" : "—"}</td>
-                  </tr>
-                ))}
+                {unique.map(p => {
+                  const nFotos = produtos.filter(x => x.sku === p.sku).length;
+                  const temRevisao = produtos.some(x => x.sku === p.sku && x.precisa_revisao);
+                  return (
+                    <tr key={p.id} onClick={() => setSelectedSku(p.sku)} style={{ cursor:"pointer" }}>
+                      <td><code style={{ fontSize:"0.8rem" }}>{p.sku}</code></td>
+                      <td style={{ fontWeight:500 }}>{p.nome_produto}</td>
+                      <td style={{ textTransform:"capitalize" }}>{p.categoria}</td>
+                      <td>{p.cor_dominante ?? "—"}</td>
+                      <td>{p.qualidade_foto ? <span className={`badge ${QUAL_BADGE[p.qualidade_foto]}`}>{p.qualidade_foto}</span> : "—"}</td>
+                      <td style={{ textAlign:"center" }}>{nFotos}</td>
+                      <td>{temRevisao ? "⚠️ Sim" : "—"}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
         )}
       </div>
 
-      {selected && <ProductModal product={selected} onClose={() => setSelected(null)} />}
+      {selectedSku && modalPhotos.length > 0 && (
+        <ProductModal
+          allPhotos={modalPhotos}
+          onClose={() => setSelectedSku(null)}
+          onRevisar={(foto) => {
+            setSelectedSku(null);
+            router.push(`/revisar?id=${foto.id}`);
+          }}
+        />
+      )}
     </AppLayout>
   );
 }

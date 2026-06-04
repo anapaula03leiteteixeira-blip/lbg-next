@@ -1,13 +1,14 @@
 "use client";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutGrid, Plus, PenLine, BarChart2, LogOut } from "lucide-react";
+import { LayoutGrid, Plus, PenLine, BarChart2, AlertTriangle, LogOut } from "lucide-react";
 
 const links = [
-  { href: "/catalogo", label: "Catálogo",       icon: LayoutGrid },
-  { href: "/novo",     label: "Novo Produto",   icon: Plus        },
-  { href: "/editar",   label: "Editar Produto", icon: PenLine     },
-  { href: "/relatorio",label: "Relatório",      icon: BarChart2   },
+  { href: "/catalogo", label: "Catálogo",       icon: LayoutGrid    },
+  { href: "/novo",     label: "Novo Produto",   icon: Plus           },
+  { href: "/editar",   label: "Editar Produto", icon: PenLine        },
+  { href: "/revisar",  label: "Revisão",        icon: AlertTriangle  },
+  { href: "/relatorio",label: "Relatório",      icon: BarChart2      },
 ];
 
 export default function Sidebar() {
