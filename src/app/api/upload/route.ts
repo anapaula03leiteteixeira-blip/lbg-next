@@ -1,6 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import Anthropic from "@anthropic-ai/sdk";
+import skuCatalog from "@/data/sku-catalog.json";
+
+interface CatalogEntry {
+  sku: string;
+  nome: string;
+  categoria: string;
+  tipo: string;
+  tags: string[];
+}
 
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD!,
@@ -31,8 +40,31 @@ export async function POST(req: NextRequest) {
     const mediaType = (mediaMap[ext] ?? "image/jpeg") as "image/jpeg" | "image/png" | "image/webp";
 
     // ── 1. Classificar com Claude Vision ─────────────────────────────────────
+    // Lookup SKU hint in catalog for richer context
+    let catalogMatch: CatalogEntry | undefined;
+    if (skuHint) {
+      const hint = skuHint.toUpperCase().replace(/\s+/g, '');
+      catalogMatch = (skuCatalog as CatalogEntry[]).find(p => {
+        const sku = p.sku.toUpperCase();
+        return sku === hint || sku.startsWith(hint) || hint.startsWith(sku);
+      });
+      // Also try matching by tags/name words
+      if (!catalogMatch) {
+        const words = skuHint.toLowerCase().split(/[\s\-_]+/).filter(w => w.length > 3);
+        catalogMatch = (skuCatalog as CatalogEntry[]).find(p =>
+          words.some(w => p.tags.includes(w) || p.nome.toLowerCase().includes(w) || p.sku.toLowerCase().includes(w))
+        );
+      }
+    }
+
     const contextParts: string[] = [];
-    if (skuHint)  contextParts.push(`SKU informado: ${skuHint}`);
+    if (catalogMatch) {
+      contextParts.push(`SKU confirmado no catálogo LBG: ${catalogMatch.sku}`);
+      contextParts.push(`Nome do produto: ${catalogMatch.nome}`);
+      contextParts.push(`Categoria: ${catalogMatch.categoria}`);
+    } else if (skuHint) {
+      contextParts.push(`SKU informado: ${skuHint}`);
+    }
     if (catHint)  contextParts.push(`Categoria informada: ${catHint}`);
     if (nomeHint) contextParts.push(`Nome informado: ${nomeHint}`);
     const context = contextParts.join("\n") || "Nenhum contexto adicional.";
@@ -77,9 +109,17 @@ JSON esperado:
     rawText = rawText.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
     const classificacao = JSON.parse(rawText);
 
-    // Hint do usuário tem prioridade
-    if (skuHint)  classificacao.sku       = skuHint;
-    if (catHint)  classificacao.categoria = catHint;
+    // Catálogo LBG tem prioridade máxima para SKU e categoria
+    if (catalogMatch) {
+      classificacao.sku       = catalogMatch.sku;
+      classificacao.categoria = catalogMatch.categoria;
+      if (!classificacao.nome_produto || classificacao.nome_produto.trim() === '') {
+        classificacao.nome_produto = catalogMatch.nome;
+      }
+    } else if (skuHint) {
+      classificacao.sku = skuHint;
+    }
+    if (catHint)  classificacao.categoria    = catHint;
     if (nomeHint) classificacao.nome_produto = nomeHint;
 
     // ── 2. Upload para Cloudinary ─────────────────────────────────────────────

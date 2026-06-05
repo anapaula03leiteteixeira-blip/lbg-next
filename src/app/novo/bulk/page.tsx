@@ -10,16 +10,24 @@ type BulkStage = 'idle' | 'extracting' | 'previewing' | 'processing' | 'done';
 type DupStatus  = 'novo' | 'possivel' | 'duplicado';
 type ProcStatus = 'waiting' | 'processing' | 'ok' | 'erro';
 
+interface CatalogEntry {
+  sku:       string;
+  nome:      string;
+  categoria: string;
+  tags:      string[];
+}
+
 interface BulkItem {
-  name:       string;
-  file:       File;
-  preview:    string;
-  hash:       string;
-  skuHint:    string;
-  dupStatus:  DupStatus;
-  selected:   boolean;
-  procStatus: ProcStatus;
-  error?:     string;
+  name:        string;
+  file:        File;
+  preview:     string;
+  hash:        string;
+  skuHint:     string;
+  nomeHint:    string;
+  dupStatus:   DupStatus;
+  selected:    boolean;
+  procStatus:  ProcStatus;
+  error?:      string;
 }
 
 interface UploadResponse {
@@ -43,6 +51,24 @@ const PROC_ICON: Record<ProcStatus, string> = {
   ok:         '✅',
   erro:       '❌',
 };
+
+function lookupCatalog(hint: string, catalog: CatalogEntry[]): CatalogEntry | undefined {
+  if (!hint || !catalog.length) return undefined;
+  const h = hint.toUpperCase().replace(/\s+/g, '');
+  // Exact or prefix match on SKU
+  let match = catalog.find(p => {
+    const s = p.sku.toUpperCase();
+    return s === h || s.startsWith(h) || h.startsWith(s);
+  });
+  // Fallback: match words against tags or name
+  if (!match) {
+    const words = hint.toLowerCase().split(/[\s\-_]+/).filter(w => w.length > 3);
+    match = catalog.find(p =>
+      words.some(w => p.tags.includes(w) || p.nome.toLowerCase().includes(w) || p.sku.toLowerCase().includes(w))
+    );
+  }
+  return match;
+}
 
 function extractSkuHint(relativePath: string, filename: string): string {
   const parts = relativePath.split('/');
@@ -107,13 +133,13 @@ export default function BulkUploadPage() {
         return;
       }
 
+      // Busca paralela: hashes existentes + catálogo SKU
       let existingHashes: Array<{ hash_sha256: string | null; arquivo_original: string | null }> = [];
-      try {
-        const res = await fetch('/api/produtos/hashes');
-        if (res.ok) existingHashes = await res.json() as typeof existingHashes;
-      } catch {
-        // proceed without duplicate detection
-      }
+      let skuCatalog: CatalogEntry[] = [];
+      await Promise.all([
+        fetch('/api/produtos/hashes').then(r => r.ok ? r.json() : []).then(d => { existingHashes = d as typeof existingHashes; }).catch(() => {}),
+        fetch('/api/sku-catalog').then(r => r.ok ? r.json() : []).then(d => { skuCatalog = d as CatalogEntry[]; }).catch(() => {}),
+      ]);
 
       const hashSet = new Set(existingHashes.map(h => h.hash_sha256).filter((h): h is string => h !== null));
       const nameSet = new Set(existingHashes.map(h => h.arquivo_original).filter((h): h is string => h !== null));
@@ -128,13 +154,16 @@ export default function BulkUploadPage() {
         const hash     = await sha256Hex(bytes);
         const file     = new File([bytes], filename, { type: mime });
         const preview  = URL.createObjectURL(new Blob([bytes], { type: mime }));
-        const skuHint  = extractSkuHint(relativePath, filename);
+        const skuHint     = extractSkuHint(relativePath, filename);
+        const catalogHit  = lookupCatalog(skuHint, skuCatalog);
+        const finalSku    = catalogHit ? catalogHit.sku    : skuHint;
+        const nomeHint    = catalogHit ? catalogHit.nome   : '';
 
         let dupStatus: DupStatus = 'novo';
         if (hashSet.has(hash))          dupStatus = 'duplicado';
         else if (nameSet.has(filename)) dupStatus = 'possivel';
 
-        newItems.push({ name: filename, file, preview, hash, skuHint, dupStatus, selected: dupStatus !== 'duplicado', procStatus: 'waiting' });
+        newItems.push({ name: filename, file, preview, hash, skuHint: finalSku, nomeHint, dupStatus, selected: dupStatus !== 'duplicado', procStatus: 'waiting' });
         setProgress(Math.round(((i + 1) / entries.length) * 100));
       }
 
@@ -339,8 +368,13 @@ export default function BulkUploadPage() {
                     </div>
                     <div style={{ padding: '0.4rem 0.5rem' }}>
                       {item.skuHint && (
-                        <p style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--accent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 1 }}>
+                        <p style={{ fontSize: '0.65rem', fontWeight: 700, color: 'var(--accent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 1 }}>
                           {item.skuHint}
+                        </p>
+                      )}
+                      {item.nomeHint && (
+                        <p style={{ fontSize: '0.6rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 1 }}>
+                          {item.nomeHint}
                         </p>
                       )}
                       <p style={{ fontSize: '0.6rem', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
