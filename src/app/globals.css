@@ -554,6 +554,12 @@ textarea.input-field { resize: vertical; min-height: 80px; }
 .text-muted { color: var(--muted); }
 .text-display { font-family: var(--font-display); }
 
+/* ── Keyframes ───────────────────────────────────────────────── */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
 /* Stagger animation delay for cards */
 .product-card:nth-child(1)  { animation-delay: 0.03s; }
 .product-card:nth-child(2)  { animation-delay: 0.06s; }
