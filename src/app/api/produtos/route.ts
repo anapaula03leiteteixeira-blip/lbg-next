@@ -37,6 +37,12 @@ export async function POST(req: NextRequest) {
     if (!body.sku?.trim())          return NextResponse.json({ error: "SKU obrigatório" },  { status: 400 });
     if (!body.nome_produto?.trim()) return NextResponse.json({ error: "Nome obrigatório" }, { status: 400 });
 
+    // M4 — validar enum de categoria na borda da API
+    const CATEGORIAS_VALIDAS = ['cuba','sanitario','pastilha','flexivel','rejunte','acessorio','outro'];
+    if (body.categoria && !CATEGORIAS_VALIDAS.includes(body.categoria)) {
+      return NextResponse.json({ error: `Categoria inválida: "${body.categoria}". Use: ${CATEGORIAS_VALIDAS.join(', ')}` }, { status: 400 });
+    }
+
     const sb = supabaseServer();
     const { data, error } = await sb
       .from("produtos")

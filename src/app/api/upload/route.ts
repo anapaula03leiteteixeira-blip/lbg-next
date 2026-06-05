@@ -12,6 +12,8 @@ interface CatalogEntry {
   tags: string[];
 }
 
+const ALLOWED_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp']);
+
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD!,
   api_key:    process.env.CLOUDINARY_API_KEY!,
@@ -23,26 +25,32 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 export async function POST(req: NextRequest) {
   try {
-    const form     = await req.formData();
-    const file     = form.get("file") as File | null;
-    const skuHint  = (form.get("sku")       as string | null) ?? "";
-    const catHint  = (form.get("categoria") as string | null) ?? "";
-    const nomeHint = (form.get("nome")      as string | null) ?? "";
+    const form             = await req.formData();
+    const file             = form.get("file") as File | null;
+    const skuHint          = (form.get("sku")              as string | null) ?? "";
+    const catHint          = (form.get("categoria")        as string | null) ?? "";
+    const nomeHint         = (form.get("nome")             as string | null) ?? "";
+    const arquivoOriginal  = (form.get("arquivo_original") as string | null) ?? null; // M2
 
     if (!file) return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 });
     if (file.size > 10 * 1024 * 1024) return NextResponse.json({ error: "Arquivo muito grande (máx 10MB)" }, { status: 400 });
 
-    const bytes      = await file.arrayBuffer();
-    const buffer     = Buffer.from(bytes);
-    const base64     = buffer.toString("base64");
+    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+
+    // M1 — validar extensão antes do processamento pesado
+    if (!ALLOWED_EXTS.has(ext)) {
+      return NextResponse.json({ error: "Formato não suportado. Use JPG, PNG ou WEBP." }, { status: 400 });
+    }
+
+    const bytes       = await file.arrayBuffer();
+    const buffer      = Buffer.from(bytes);
+    const base64      = buffer.toString("base64");
     const hash_sha256 = createHash('sha256').update(buffer).digest('hex');
 
-    const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
     const mediaMap: Record<string, string> = { jpg:"image/jpeg", jpeg:"image/jpeg", png:"image/png", webp:"image/webp" };
     const mediaType = (mediaMap[ext] ?? "image/jpeg") as "image/jpeg" | "image/png" | "image/webp";
 
     // ── 1. Classificar com Claude Vision ─────────────────────────────────────
-    // Lookup SKU hint in catalog for richer context
     let catalogMatch: CatalogEntry | undefined;
     if (skuHint) {
       const hint = skuHint.toUpperCase().replace(/\s+/g, '');
@@ -50,7 +58,6 @@ export async function POST(req: NextRequest) {
         const sku = p.sku.toUpperCase();
         return sku === hint || sku.startsWith(hint) || hint.startsWith(sku);
       });
-      // Also try matching by tags/name words
       if (!catalogMatch) {
         const words = skuHint.toLowerCase().split(/[\s\-_]+/).filter(w => w.length > 3);
         catalogMatch = (skuCatalog as CatalogEntry[]).find(p =>
@@ -71,6 +78,7 @@ export async function POST(req: NextRequest) {
     if (nomeHint) contextParts.push(`Nome informado: ${nomeHint}`);
     const context = contextParts.join("\n") || "Nenhum contexto adicional.";
 
+    // H1 — "pastilha" adicionado ao enum de categoria
     const prompt = `Você é especialista em produtos hidráulicos e de banheiro.
 Analise esta foto e retorne APENAS JSON válido, sem texto adicional.
 
@@ -81,7 +89,7 @@ JSON esperado:
 {
   "sku": "use o informado ou deixe vazio",
   "nome_produto": "nome comercial completo",
-  "categoria": "cuba|sanitario|flexivel|rejunte|acessorio|outro",
+  "categoria": "cuba|sanitario|pastilha|flexivel|rejunte|acessorio|outro",
   "subcategoria": "subcategoria específica",
   "cor_dominante": "cor principal",
   "angulo": "frontal|lateral|superior|perspectiva|detalhe|conjunto|embalagem",
@@ -95,25 +103,39 @@ JSON esperado:
   "precisa_revisao": false
 }`;
 
+    // M3 — AbortSignal.timeout + H2 — bounds check em content[0]
     let aiResp;
     try {
-      aiResp = await anthropic.messages.create({
-        model:      "claude-sonnet-4-6",
-        max_tokens: 1200,
-        messages: [{
-          role:    "user",
-          content: [
-            { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-            { type: "text",  text: prompt },
-          ],
-        }],
-      });
+      aiResp = await anthropic.messages.create(
+        {
+          model:      "claude-sonnet-4-6",
+          max_tokens: 1200,
+          messages: [{
+            role:    "user",
+            content: [
+              { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+              { type: "text",  text: prompt },
+            ],
+          }],
+        },
+        { signal: AbortSignal.timeout(45_000) },
+      );
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      return NextResponse.json({ error: `[Claude Vision] ${msg}` }, { status: 502 });
+      const isTimeout = msg.includes('AbortError') || msg.includes('timed out') || msg.includes('abort');
+      return NextResponse.json(
+        { error: isTimeout ? '[Claude Vision] Timeout — tente novamente' : `[Claude Vision] ${msg}` },
+        { status: 502 },
+      );
     }
 
-    let rawText = aiResp.content[0].type === "text" ? aiResp.content[0].text.trim() : "{}";
+    // H2 — bounds check: content pode ser array vazio em edge cases
+    const firstBlock = aiResp.content[0];
+    if (!firstBlock) {
+      return NextResponse.json({ error: '[Claude Vision] Resposta vazia do modelo' }, { status: 502 });
+    }
+
+    let rawText = firstBlock.type === "text" ? firstBlock.text.trim() : "{}";
     rawText = rawText.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
     let classificacao: Record<string, unknown> = {};
     try {
@@ -158,7 +180,7 @@ JSON esperado:
       classificacao,
       image_url:        uploadResult.secure_url,
       hash_sha256,
-      arquivo_original: file.name,
+      arquivo_original: arquivoOriginal ?? file.name, // M2 — usa valor do cliente ou fallback
     });
 
   } catch (e: unknown) {
