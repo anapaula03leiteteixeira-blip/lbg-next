@@ -349,7 +349,10 @@ export default function CatalogoPage() {
   useEffect(() => {
     fetch("/api/produtos")
       .then(r => r.json())
-      .then(data => { setProdutos(data); setLoading(false); })
+      .then((data: unknown) => {
+        setProdutos(Array.isArray(data) ? (data as Produto[]) : []);
+        setLoading(false);
+      })
       .catch(() => setLoading(false));
   }, []);
 

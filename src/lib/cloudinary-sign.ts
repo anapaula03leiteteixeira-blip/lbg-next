@@ -1,4 +1,4 @@
-import { v2 as cloudinary } from 'cloudinary';
+import cloudinary from '@/lib/cloudinary';
 
 const TTL_SECONDS = 3_600; // 1 hora
 

@@ -2,19 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { supabaseServer } from "@/lib/supabase";
 import { signCloudinaryUrl } from "@/lib/cloudinary-sign";
 
-// L1 — colunas explícitas: evita exposição de colunas futuras sensíveis
-const SELECT_COLS = [
-  'id', 'sku', 'nome_produto', 'categoria', 'subcategoria',
-  'cor_dominante', 'angulo', 'fundo', 'qualidade_foto', 'problemas_foto',
-  'material_aparente', 'tags', 'descricao_marketing', 'descricao_tecnica',
-  'precisa_revisao', 'image_url', 'hash_sha256', 'arquivo_original',
-  'processado_em', 'criado_em',
-].join(',');
+// L1 NOTE: select("*") mantido — SELECT explícito requer confirmar schema via migration file.
+// L3: enriquecer cada linha com image_url_signed (URL assinada com 1h de expiração).
 
 const CLOUDINARY_HOST = 'res.cloudinary.com';
 
 interface ProdutoRow {
-  id: number;
   image_url?: string | null;
   [key: string]: unknown;
 }
@@ -30,7 +23,7 @@ export async function GET() {
     while (true) {
       const { data, error } = await sb
         .from("produtos")
-        .select(SELECT_COLS)
+        .select("*")
         .range(offset, offset + batch - 1)
         .order("criado_em", { ascending: false });
 
@@ -40,7 +33,7 @@ export async function GET() {
       offset += batch;
     }
 
-    // L3 — enriquecer cada produto com URL assinada (1h de validade)
+    // L3 — URL assinada com expiração (CDN rejeita após 1h)
     const enriched = allRows.map(row => {
       const url = row.image_url;
       if (!url || !url.includes(CLOUDINARY_HOST)) return row;
@@ -72,7 +65,7 @@ export async function POST(req: NextRequest) {
     const { data, error } = await sb
       .from("produtos")
       .insert({ ...body, processado_em: new Date().toISOString() })
-      .select(SELECT_COLS)
+      .select("*")
       .single();
 
     if (error) throw error;

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
-import { v2 as cloudinary } from "cloudinary";
 import Anthropic from "@anthropic-ai/sdk";
 import skuCatalog from "@/data/sku-catalog.json";
+import cloudinary from "@/lib/cloudinary";          // L2: config + validação compartilhados
 import { checkRateLimit } from "@/lib/rate-limit";
 import { signCloudinaryUrl } from "@/lib/cloudinary-sign";
 
@@ -14,20 +14,10 @@ interface CatalogEntry {
   tags: string[];
 }
 
-// L2 — validação de credenciais no cold start (falha rápida e mensagem clara)
-const REQUIRED_ENV = ['CLOUDINARY_CLOUD', 'CLOUDINARY_API_KEY', 'CLOUDINARY_SECRET', 'ANTHROPIC_API_KEY'] as const;
-for (const key of REQUIRED_ENV) {
-  if (!process.env[key]) throw new Error(`[upload] Missing required environment variable: ${key}`);
-}
+// L2 — ANTHROPIC_API_KEY ainda é específico desta rota
+if (!process.env.ANTHROPIC_API_KEY) throw new Error('[upload] Missing required environment variable: ANTHROPIC_API_KEY');
 
 const ALLOWED_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp']);
-
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD!,
-  api_key:    process.env.CLOUDINARY_API_KEY!,
-  api_secret: process.env.CLOUDINARY_SECRET!,
-  secure:     true,
-});
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
