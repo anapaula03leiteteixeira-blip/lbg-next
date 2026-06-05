@@ -95,27 +95,38 @@ JSON esperado:
   "precisa_revisao": false
 }`;
 
-    const aiResp = await anthropic.messages.create({
-      model:      "claude-sonnet-4-6",
-      max_tokens: 1200,
-      messages: [{
-        role:    "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-          { type: "text",  text: prompt },
-        ],
-      }],
-    });
+    let aiResp;
+    try {
+      aiResp = await anthropic.messages.create({
+        model:      "claude-sonnet-4-6",
+        max_tokens: 1200,
+        messages: [{
+          role:    "user",
+          content: [
+            { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
+            { type: "text",  text: prompt },
+          ],
+        }],
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return NextResponse.json({ error: `[Claude Vision] ${msg}` }, { status: 502 });
+    }
 
     let rawText = aiResp.content[0].type === "text" ? aiResp.content[0].text.trim() : "{}";
     rawText = rawText.replace(/^```(?:json)?\s*/m, "").replace(/\s*```$/m, "").trim();
-    const classificacao = JSON.parse(rawText);
+    let classificacao: Record<string, unknown> = {};
+    try {
+      classificacao = JSON.parse(rawText) as Record<string, unknown>;
+    } catch {
+      return NextResponse.json({ error: `[Claude Vision] Resposta inválida (não é JSON): ${rawText.slice(0, 120)}` }, { status: 502 });
+    }
 
     // Catálogo LBG tem prioridade máxima para SKU e categoria
     if (catalogMatch) {
       classificacao.sku       = catalogMatch.sku;
       classificacao.categoria = catalogMatch.categoria;
-      if (!classificacao.nome_produto || classificacao.nome_produto.trim() === '') {
+      if (!(classificacao.nome_produto as string | undefined)?.trim()) {
         classificacao.nome_produto = catalogMatch.nome;
       }
     } else if (skuHint) {
@@ -125,14 +136,23 @@ JSON esperado:
     if (nomeHint) classificacao.nome_produto = nomeHint;
 
     // ── 2. Upload para Cloudinary ─────────────────────────────────────────────
-    const publicId = `lbg/${classificacao.categoria ?? "outro"}/${(classificacao.sku ?? "produto").replace(/[^a-zA-Z0-9-_]/g, "_")}-${classificacao.angulo ?? "frontal"}-${Date.now()}`;
+    const cat      = (classificacao.categoria as string | undefined) ?? "outro";
+    const sku      = (classificacao.sku      as string | undefined) ?? "produto";
+    const angulo   = (classificacao.angulo   as string | undefined) ?? "frontal";
+    const publicId = `lbg/${cat}/${sku.replace(/[^a-zA-Z0-9-_]/g, "_")}-${angulo}-${Date.now()}`;
 
-    const uploadResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
-      cloudinary.uploader.upload_stream(
-        { public_id: publicId, overwrite: false, quality: "auto", fetch_format: "auto" },
-        (err, result) => err ? reject(err) : resolve(result as { secure_url: string }),
-      ).end(buffer);
-    });
+    let uploadResult: { secure_url: string };
+    try {
+      uploadResult = await new Promise<{ secure_url: string }>((resolve, reject) => {
+        cloudinary.uploader.upload_stream(
+          { public_id: publicId, overwrite: false, quality: "auto", fetch_format: "auto" },
+          (err, result) => err ? reject(err) : resolve(result as { secure_url: string }),
+        ).end(buffer);
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return NextResponse.json({ error: `[Cloudinary] ${msg}` }, { status: 502 });
+    }
 
     return NextResponse.json({
       classificacao,

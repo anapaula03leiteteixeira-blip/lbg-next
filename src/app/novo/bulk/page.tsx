@@ -100,7 +100,8 @@ export default function BulkUploadPage() {
   const [procIdx,  setProcIdx]  = useState(0);
   const [totalSel, setTotalSel] = useState(0);
   const [summary,  setSummary]  = useState({ novos: 0, pulados: 0, erros: 0 });
-  const [hashWarn, setHashWarn] = useState('');
+  const [hashWarn,     setHashWarn]     = useState('');
+  const [showErrLog,   setShowErrLog]   = useState(false);
 
   async function handleZip(zipFile: File) {
     if (!zipFile.name.toLowerCase().endsWith('.zip')) {
@@ -235,7 +236,7 @@ export default function BulkUploadPage() {
         if (item.skuHint) fd.append('sku', item.skuHint);
         const upRes  = await fetch('/api/upload', { method: 'POST', body: fd });
         const upData = await upRes.json() as UploadResponse;
-        if (!upRes.ok) throw new Error(upData.error ?? 'Erro no upload');
+        if (!upRes.ok) throw new Error(`[Classificação] ${upData.error ?? 'Erro no upload'}`);
 
         const produto = {
           ...upData.classificacao,
@@ -246,7 +247,7 @@ export default function BulkUploadPage() {
 
         const saveRes  = await fetch('/api/produtos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(produto) });
         const saveData = await saveRes.json() as { error?: string };
-        if (!saveRes.ok) throw new Error(saveData.error ?? 'Erro ao salvar');
+        if (!saveRes.ok) throw new Error(`[Salvar DB] ${saveData.error ?? 'Erro ao salvar'}`);
 
         setItems(prev => prev.map((it, i) => i === idx ? { ...it, procStatus: 'ok' } : it));
         novos++;
@@ -445,25 +446,62 @@ export default function BulkUploadPage() {
         )}
 
         {stage === 'done' && (
-          <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center', paddingTop: '2rem' }}>
-            <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>🎉</p>
-            <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', marginBottom: '0.5rem' }}>
-              Importação concluída
-            </h2>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', margin: '1.5rem 0', flexWrap: 'wrap' }}>
-              <SummaryCard value={summary.novos}   label="Salvos"  color="#166534" bg="#dcfce7" />
-              <SummaryCard value={summary.pulados} label="Pulados" color="#854d0e" bg="#fef9c3" />
-              <SummaryCard value={summary.erros}   label="Erros"   color="#991b1b" bg="#fee2e2" />
+          <div style={{ maxWidth: 560, margin: '0 auto', paddingTop: '2rem' }}>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ fontSize: '3rem', marginBottom: '1rem' }}>{summary.erros > 0 ? '⚠️' : '🎉'}</p>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', marginBottom: '0.5rem' }}>
+                Importação concluída
+              </h2>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', margin: '1.5rem 0', flexWrap: 'wrap' }}>
+                <SummaryCard value={summary.novos}   label="Salvos"  color="#166534" bg="#dcfce7" />
+                <SummaryCard value={summary.pulados} label="Pulados" color="#854d0e" bg="#fef9c3" />
+                <SummaryCard value={summary.erros}   label="Erros"   color="#991b1b" bg="#fee2e2" />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
+                <button
+                  className="btn btn-outline"
+                  onClick={() => { items.forEach(it => URL.revokeObjectURL(it.preview)); setStage('idle'); setItems([]); setProgress(0); setError(''); setHashWarn(''); setShowErrLog(false); }}
+                >
+                  Nova importação
+                </button>
+                <Link href="/catalogo" className="btn btn-primary">Ver catálogo</Link>
+              </div>
             </div>
-            <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
-              <button
-                className="btn btn-outline"
-                onClick={() => { items.forEach(it => URL.revokeObjectURL(it.preview)); setStage('idle'); setItems([]); setProgress(0); setError(''); setHashWarn(''); }}
-              >
-                Nova importação
-              </button>
-              <Link href="/catalogo" className="btn btn-primary">Ver catálogo</Link>
-            </div>
+
+            {summary.erros > 0 && (() => {
+              const errados = items.filter(it => it.procStatus === 'erro');
+              const logText = errados.map(it => `${it.relativePath}\n  → ${it.error ?? 'Erro desconhecido'}`).join('\n\n');
+              return (
+                <div style={{ border: '1px solid #fca5a5', borderRadius: 8, overflow: 'hidden' }}>
+                  <button
+                    onClick={() => setShowErrLog(v => !v)}
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.75rem 1rem', background: '#fee2e2', border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: '#991b1b' }}
+                  >
+                    <span>❌ {errados.length} erro{errados.length !== 1 ? 's' : ''} — ver detalhes</span>
+                    <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>{showErrLog ? '▲ fechar' : '▼ expandir'}</span>
+                  </button>
+                  {showErrLog && (
+                    <div style={{ background: '#fff5f5', padding: '0.875rem 1rem' }}>
+                      <div style={{ maxHeight: 280, overflowY: 'auto', marginBottom: '0.75rem' }}>
+                        {errados.map((it, i) => (
+                          <div key={i} style={{ marginBottom: '0.625rem', paddingBottom: '0.625rem', borderBottom: i < errados.length - 1 ? '1px solid #fecaca' : 'none' }}>
+                            <p style={{ fontSize: '0.78rem', fontWeight: 600, color: '#1c1917', marginBottom: 2 }}>{it.relativePath}</p>
+                            <p style={{ fontSize: '0.75rem', color: '#b91c1c', fontFamily: 'monospace' }}>{it.error ?? 'Erro desconhecido'}</p>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        className="btn btn-ghost btn-sm"
+                        style={{ fontSize: '0.75rem' }}
+                        onClick={() => navigator.clipboard.writeText(logText).then(() => alert('Log copiado!'))}
+                      >
+                        📋 Copiar log completo
+                      </button>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
 
