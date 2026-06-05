@@ -1,6 +1,6 @@
 # PRD — La Bella Griffe: Sistema de Catálogo de Produtos
 
-**Versão:** 4.3
+**Versão:** 4.4
 **Data:** 2026-06-05
 **Status:** Em produção
 **Owner:** Ana Paula Teixeira (anapaula03.leiteteixeira@gmail.com)
@@ -26,7 +26,8 @@ Usuários autenticados por email + senha com três perfis de acesso (admin, edit
 | v4 — Next.js | Multi-foto, revisão, admin de usuários | Substituído | 2026-06-03 |
 | v4.1 — Next.js | Download de fotos no carrossel | Substituído | 2026-06-04 |
 | v4.2 — Next.js | Upload em lote ZIP + dedup + catálogo LBG + melhorias catálogo | Substituído | 2026-06-05 |
-| **v4.3 — Next.js** | **Correções UI: pastilha em todos os dropdowns, botão lote destacado, modal What's New, brand redesign (Playfair Display + paleta La Bella)** | **Em produção** | 2026-06-05 |
+| v4.3 — Next.js | Correções UI: pastilha em todos os dropdowns, botão lote destacado, modal What's New, brand redesign (Playfair Display + paleta La Bella) | Substituído | 2026-06-05 |
+| **v4.4 — Next.js** | **Sprint QA completo (H1–M5 + L1–L3): 10 bugs corrigidos no pipeline de upload. Multi-foto queue em Novo Produto. Instruções de uso em lote e individual. Correção CSS keyframes fadeUp.** | **Em produção** | 2026-06-05 |
 
 ---
 
@@ -89,7 +90,26 @@ Importação de múltiplas fotos de uma vez, com detecção automática de dupli
 - Painel expandível na tela de conclusão com arquivo e mensagem
 - Botão "Copiar log" para debug e suporte
 
-### 4.3 Download de Fotos
+### 4.3 Multi-Foto Queue em Novo Produto (`/novo`) — v4.4
+
+Upload de múltiplas fotos do mesmo produto em uma única sessão, sem precisar repetir SKU e nome.
+
+**Fluxo:**
+1. Editor arrasta ou seleciona N fotos de uma vez na zona de upload
+2. Todas as fotos entram em uma fila com thumbnails indicadores
+3. SKU, nome e categoria informados uma vez → reutilizados em todas as fotos
+4. A IA classifica cada foto individualmente (ângulo, qualidade, material, fundo)
+5. Após salvar uma foto, o sistema avança automaticamente para a próxima (1,2s)
+6. Botão "Pular" disponível para ignorar qualquer foto da fila
+
+**Indicadores de progresso:**
+- Barra com thumbnails: cinza = aguardando · azul = foto atual · verde com ✓ = salva
+- Contador "Foto X de Y · N restantes"
+- Contador "✅ N salvas" atualizado em tempo real
+
+---
+
+### 4.4 Download de Fotos
 
 Disponível no modal do produto, em dois pontos de acesso:
 
@@ -107,7 +127,18 @@ Disponível no modal do produto, em dois pontos de acesso:
 
 **Segurança do proxy:** valida que a URL de origem pertence aos domínios autorizados (`raw.githubusercontent.com`, `cloudinary.com`, `drive.google.com`). URLs externas retornam 403.
 
-### 4.4 Modal Multi-Foto (Galeria)
+### 4.5 Painéis de Instruções — v4.4
+
+Ambas as páginas de cadastro possuem painel colapsável "Como funciona":
+
+| Página | Conteúdo |
+|--------|----------|
+| `/novo` | 3 etapas (upload → IA → revisar) + dica multi-ângulo + link para lote |
+| `/novo/bulk` | 4 etapas (organizar → zipar → revisar → importar) + estrutura ZIP recomendada + legenda de badges |
+
+---
+
+### 4.6 Modal Multi-Foto (Galeria)
 
 Ao clicar em um produto no catálogo:
 - Foto principal grande com setas ← → para navegar
@@ -118,7 +149,7 @@ Ao clicar em um produto no catálogo:
 - Botão "Revisar esta foto" nas fotos marcadas `precisa_revisao = true`
 - Dados do produto (SKU, nome, categoria, tags, descrição) à direita
 
-### 4.5 Fila de Revisão (`/revisar`)
+### 4.7 Fila de Revisão (`/revisar`)
 
 Fotos marcadas como `precisa_revisao = true` entram na fila. Para cada foto:
 
@@ -133,7 +164,7 @@ Fotos marcadas como `precisa_revisao = true` entram na fila. Para cada foto:
 - Do catálogo: clique no card "Revisão" redireciona para `/revisar`
 - Do modal: botão "Revisar esta foto" leva diretamente para o item
 
-### 4.6 Administração de Usuários (`/admin`)
+### 4.8 Administração de Usuários (`/admin`)
 
 Exclusivo do perfil admin:
 
@@ -208,7 +239,10 @@ src/
 │   └── AppLayout.tsx           → wrapper de layout
 ├── lib/
 │   ├── auth.ts                 → NextAuth config (legado, não usado)
-│   └── supabase.ts             → clients anon + service role
+│   ├── supabase.ts             → clients anon + service role
+│   ├── cloudinary.ts           → config compartilhada Cloudinary + assertConfigured()
+│   ├── cloudinary-sign.ts      → gera URLs assinadas com expiração (1h)
+│   └── rate-limit.ts           → janela deslizante 10 req/min por IP
 ├── middleware.ts               → proteção de rotas por JWT e role
 └── types/index.ts              → Produto, Usuario, Role, AuthUser, etc.
 ```
@@ -384,6 +418,23 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision):
 | Thumbnails em branco sem `onError` fallback | `catalogo/page.tsx` | v4.1→v4.2 |
 | Memory leak: `URL.createObjectURL` nunca revogado | `novo/bulk/page.tsx` | v4.1→v4.2 |
 | Sem limite de tamanho de ZIP | `novo/bulk/page.tsx` | v4.1→v4.2 |
+| **Sprint 1 — Alta prioridade** | | |
+| H1: `"pastilha"` ausente no enum do prompt Claude Vision → IA nunca classificava como pastilha | `api/upload/route.ts` | v4.3→v4.4 |
+| H2: Sem bounds check em `aiResp.content[0]` → crash se modelo retornasse array vazio | `api/upload/route.ts` | v4.3→v4.4 |
+| **Sprint 1 — Média prioridade** | | |
+| M1: Sem validação de extensão antes de processar buffer → formatos inválidos chegavam à IA | `api/upload/route.ts` | v4.3→v4.4 |
+| M2: `arquivo_original` sempre `file.name` (ignorava nome real do ZIP) → falsos positivos de dedup | `api/upload/route.ts` | v4.3→v4.4 |
+| M3: Sem timeout na chamada Anthropic → requisições podiam ficar penduradas indefinidamente | `api/upload/route.ts` | v4.3→v4.4 |
+| M4: `POST /api/produtos` não validava enum de categoria → valores inválidos entravam no banco | `api/produtos/route.ts` | v4.3→v4.4 |
+| **Sprint 2 — Média prioridade** | | |
+| M5: Sem rate limiting no endpoint de upload → possível abuso da API Anthropic | `api/upload/route.ts`, `lib/rate-limit.ts` | v4.3→v4.4 |
+| **Bugs de qualidade — Baixa prioridade** | | |
+| L2: Credenciais Cloudinary/Anthropic validadas apenas em runtime → crash tardio sem mensagem clara | `api/upload/route.ts`, `lib/cloudinary.ts` | v4.3→v4.4 |
+| L3: URLs de imagem Cloudinary permanentes e públicas → adicionado suporte a signed URLs (1h TTL) | `lib/cloudinary-sign.ts` | v4.3→v4.4 |
+| **Hotfixes pós-deploy** | | |
+| `@keyframes fadeUp` ausente em `globals.css` → cards do catálogo ficavam com `opacity:0` permanentemente | `app/globals.css` | v4.3→v4.4 |
+| `cloudinary.ts` lançava `throw` em nível de módulo → cold start de `GET /api/produtos` falhava, catálogo vazio | `lib/cloudinary.ts`, `api/produtos/route.ts` | v4.3→v4.4 |
+| `Array.isArray` guard ausente no frontend → se API retornasse objeto de erro, `.filter()` crashava silenciosamente | `app/catalogo/page.tsx` | v4.3→v4.4 |
 
 ---
 
@@ -398,12 +449,16 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision):
 | GitHub para imagens existentes | 435 fotos já comprimidas (13.4 MB), sem custo adicional |
 | Cloudinary para novas fotos | CDN profissional, transformações automáticas (resize, WebP) |
 | Claude Sonnet em vez de Opus | 5x mais barato, qualidade equivalente para classificação de imagens |
+| Rate limiting in-process (Map) | Zero deps externas, best-effort no Vercel (por lambda); suficiente para projeto interno |
+| Cloudinary config em módulo compartilhado | Cada route.ts é um lambda separado no Vercel — config em `lib/cloudinary.ts` garante disponibilidade |
+| Cloudinary signed URLs com `expires_at` | CDN rejeita URL após timestamp — controle de acesso real sem migrar para `type:authenticated` |
+| `throw` fora de handlers → validação dentro do handler | `throw` em nível de módulo quebra cold start de qualquer rota que importe o módulo |
 
 ---
 
 ## 13. Roadmap
 
-### Fase 0 — Qualidade e Correções (v4.3 — Concluído)
+### Fase 0 — Qualidade e Correções (v4.3–v4.4 — Concluído)
 
 | Prioridade | Feature | Esforço | Status |
 |-----------|---------|---------|--------|
@@ -411,7 +466,10 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision):
 | Alta | Botão "Importar em Lote" destacado (btn-gold) | Mínimo | **Concluído v4.3** |
 | Alta | Modal What's New ao entrar no sistema | Pequeno | **Concluído v4.3** |
 | Alta | Brand redesign: Playfair Display + paleta La Bella | Pequeno | **Concluído v4.3** |
-| Alta | QA: revisar log de erros de subida de produto | Médio | **Pendente QA** |
+| Alta | Sprint QA completo: H1–H2 (upload), M1–M5 (segurança), L1–L3 (qualidade) | Médio | **Concluído v4.4** |
+| Alta | Multi-foto queue em Novo Produto (arrastar N fotos de uma vez) | Pequeno | **Concluído v4.4** |
+| Média | Painéis de instruções colapsáveis em `/novo` e `/novo/bulk` | Pequeno | **Concluído v4.4** |
+| Alta | Hotfix: `@keyframes fadeUp` faltante — catálogo em grade vazio | Mínimo | **Concluído v4.4** |
 
 ### Fase 1 — lbg-next como Fonte de Verdade para Gabi (v4.4)
 
@@ -450,4 +508,4 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision):
 
 ---
 
-*Atualizado em 05/06/2026 — v4.3 | Next.js 14 + Supabase + Cloudinary + Anthropic*
+*Atualizado em 05/06/2026 — v4.4 | Next.js 14 + Supabase + Cloudinary + Anthropic*
