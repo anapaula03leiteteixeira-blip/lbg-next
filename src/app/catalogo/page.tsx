@@ -5,7 +5,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import type { Produto, Categoria, Qualidade } from "@/types";
 import { Search, SlidersHorizontal, X, ChevronDown, ChevronLeft, ChevronRight, AlertTriangle, Download } from "lucide-react";
 
-const CATEGORIAS: Categoria[] = ["cuba","sanitario","flexivel","rejunte","acessorio","outro"];
+const CATEGORIAS: Categoria[] = ["cuba","sanitario","pastilha","flexivel","rejunte","acessorio","outro"];
 const QUALIDADES: Qualidade[] = ["excelente","boa","regular","ruim"];
 
 const QUAL_BADGE: Record<string, string> = {
@@ -20,6 +20,26 @@ function imgUrl(url: string | undefined, w = 600) {
   if (!url) return null;
   if (url.includes("cloudinary.com")) return url.replace("/upload/", `/upload/w_${w},q_auto,f_auto/`);
   return url;
+}
+
+function ProductImage({ src, alt }: { src: string | null; alt: string }) {
+  const [failed, setFailed] = useState(false);
+  if (!src || failed) {
+    return (
+      <div className="product-img-placeholder">
+        <span style={{ fontSize: '2rem', opacity: 0.35 }}>🖼️</span>
+      </div>
+    );
+  }
+  return (
+    <img
+      src={src}
+      alt={alt}
+      className="product-img"
+      loading="lazy"
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 function SkeletonCard() {
@@ -490,10 +510,7 @@ export default function CatalogoPage() {
                   style={temRevisao ? { borderColor:"#fcd34d" } : {}}
                   onClick={() => setSelectedSku(p.sku)}
                 >
-                  {src
-                    ? <img src={src} alt={p.nome_produto} className="product-img" loading="lazy" />
-                    : <div className="product-img-placeholder">📷 Sem imagem</div>
-                  }
+                  <ProductImage src={src} alt={p.nome_produto} />
                   <div className="product-info">
                     <div className="product-sku" style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
                       <span>{p.sku}</span>
