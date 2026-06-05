@@ -4,6 +4,7 @@ import { v2 as cloudinary } from "cloudinary";
 import Anthropic from "@anthropic-ai/sdk";
 import skuCatalog from "@/data/sku-catalog.json";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { signCloudinaryUrl } from "@/lib/cloudinary-sign";
 
 interface CatalogEntry {
   sku: string;
@@ -11,6 +12,12 @@ interface CatalogEntry {
   categoria: string;
   tipo: string;
   tags: string[];
+}
+
+// L2 — validação de credenciais no cold start (falha rápida e mensagem clara)
+const REQUIRED_ENV = ['CLOUDINARY_CLOUD', 'CLOUDINARY_API_KEY', 'CLOUDINARY_SECRET', 'ANTHROPIC_API_KEY'] as const;
+for (const key of REQUIRED_ENV) {
+  if (!process.env[key]) throw new Error(`[upload] Missing required environment variable: ${key}`);
 }
 
 const ALLOWED_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp']);
@@ -189,11 +196,15 @@ JSON esperado:
       return NextResponse.json({ error: `[Cloudinary] ${msg}` }, { status: 502 });
     }
 
+    // L3 — URL assinada com expiração de 1h (CDN Cloudinary rejeita após timestamp)
+    const image_url_signed = signCloudinaryUrl(uploadResult.secure_url);
+
     return NextResponse.json({
       classificacao,
       image_url:        uploadResult.secure_url,
+      image_url_signed,
       hash_sha256,
-      arquivo_original: arquivoOriginal ?? file.name, // M2 — usa valor do cliente ou fallback
+      arquivo_original: arquivoOriginal ?? file.name,
     });
 
   } catch (e: unknown) {
