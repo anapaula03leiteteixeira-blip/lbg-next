@@ -53,6 +53,17 @@ export interface Produto {
   criado_em?:          string;
 }
 
+export interface ProdutoGabi {
+  sku:                  string;
+  nome_produto:         string;
+  categoria:            Categoria;
+  cor_dominante?:       string;
+  qualidade_foto?:      Qualidade;
+  image_url?:           string;
+  descricao_marketing:  string | null;
+  tags?:                string[];
+}
+
 export interface FiltrosProduto {
   search?:     string;
   categoria?:  Categoria[];

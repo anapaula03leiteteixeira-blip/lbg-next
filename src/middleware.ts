@@ -5,6 +5,7 @@ const SECRET       = new TextEncoder().encode(process.env.NEXTAUTH_SECRET ?? "ch
 const PUBLIC       = ["/login", "/api/auth/login"];
 const ADMIN_ONLY   = ["/admin", "/api/admin"];
 const EDITOR_ONLY  = ["/novo", "/editar", "/revisar", "/api/upload", "/api/produtos"];
+const AUTH_ONLY    = ["/api/gabi"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
@@ -31,6 +32,11 @@ export async function middleware(req: NextRequest) {
   // rotas de edição → admin ou editor
   if (EDITOR_ONLY.some(r => pathname.startsWith(r)) && role === "viewer") {
     return NextResponse.redirect(new URL("/catalogo", req.url));
+  }
+
+  // AUTH_ONLY → qualquer role autenticada (token já validado acima)
+  if (AUTH_ONLY.some(r => pathname.startsWith(r))) {
+    return NextResponse.next();
   }
 
   return NextResponse.next();
