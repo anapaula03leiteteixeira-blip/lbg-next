@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 import { v2 as cloudinary } from "cloudinary";
 import Anthropic from "@anthropic-ai/sdk";
 import skuCatalog from "@/data/sku-catalog.json";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 interface CatalogEntry {
   sku: string;
@@ -25,6 +26,18 @@ const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 export async function POST(req: NextRequest) {
   try {
+    // M5 — rate limiting: 10 uploads/min per IP
+    const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+            ?? req.headers.get('x-real-ip')
+            ?? '127.0.0.1';
+    const { ok, retryAfter } = checkRateLimit(ip);
+    if (!ok) {
+      return NextResponse.json(
+        { error: 'Muitas tentativas. Aguarde antes de tentar novamente.' },
+        { status: 429, headers: { 'Retry-After': String(retryAfter) } },
+      );
+    }
+
     const form             = await req.formData();
     const file             = form.get("file") as File | null;
     const skuHint          = (form.get("sku")              as string | null) ?? "";
