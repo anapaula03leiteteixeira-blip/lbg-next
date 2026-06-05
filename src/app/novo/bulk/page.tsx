@@ -100,6 +100,7 @@ export default function BulkUploadPage() {
   const [procIdx,  setProcIdx]  = useState(0);
   const [totalSel, setTotalSel] = useState(0);
   const [summary,  setSummary]  = useState({ novos: 0, pulados: 0, erros: 0 });
+  const [hashWarn, setHashWarn] = useState('');
 
   async function handleZip(zipFile: File) {
     if (!zipFile.name.toLowerCase().endsWith('.zip')) {
@@ -142,13 +143,27 @@ export default function BulkUploadPage() {
       // Busca paralela: hashes existentes + catálogo SKU
       let existingHashes: Array<{ hash_sha256: string | null; arquivo_original: string | null }> = [];
       let skuCatalog: CatalogEntry[] = [];
+      let hashFetchError = '';
       await Promise.all([
-        fetch('/api/produtos/hashes').then(r => r.ok ? r.json() : []).then(d => { existingHashes = d as typeof existingHashes; }).catch(() => {}),
+        fetch('/api/produtos/hashes')
+          .then(async r => {
+            if (!r.ok) throw new Error(`HTTP ${r.status}`);
+            return r.json();
+          })
+          .then(d => { existingHashes = d as typeof existingHashes; })
+          .catch(e => { hashFetchError = e instanceof Error ? e.message : 'erro desconhecido'; }),
         fetch('/api/sku-catalog').then(r => r.ok ? r.json() : []).then(d => { skuCatalog = d as CatalogEntry[]; }).catch(() => {}),
       ]);
 
-      const hashSet = new Set(existingHashes.map(h => h.hash_sha256).filter((h): h is string => h !== null));
-      const nameSet = new Set(existingHashes.map(h => h.arquivo_original).filter((h): h is string => h !== null));
+      if (hashFetchError) {
+        setHashWarn(`⚠️ Não foi possível carregar os hashes do banco (${hashFetchError}). Verificação de duplicatas desativada. Verifique se a coluna hash_sha256 existe na tabela produtos.`);
+      } else {
+        setHashWarn('');
+      }
+
+      const hashSet      = new Set(existingHashes.map(h => h.hash_sha256).filter((h): h is string => h !== null));
+      const nameSet      = new Set(existingHashes.map(h => h.arquivo_original).filter((h): h is string => h !== null));
+      const localHashSet = new Set<string>(); // dedup dentro do mesmo ZIP
 
       const newItems: BulkItem[] = [];
 
@@ -166,9 +181,10 @@ export default function BulkUploadPage() {
         const nomeHint    = catalogHit ? catalogHit.nome   : '';
 
         let dupStatus: DupStatus = 'novo';
-        if (hashSet.has(hash))               dupStatus = 'duplicado';
-        else if (nameSet.has(relativePath))  dupStatus = 'possivel';
+        if (hashSet.has(hash) || localHashSet.has(hash)) dupStatus = 'duplicado';
+        else if (nameSet.has(relativePath))              dupStatus = 'possivel';
 
+        localHashSet.add(hash);
         newItems.push({ name: filename, relativePath, file, preview, hash, skuHint: finalSku, nomeHint, dupStatus, selected: dupStatus !== 'duplicado', procStatus: 'waiting' });
         setProgress(Math.round(((i + 1) / entries.length) * 100));
       }
@@ -304,6 +320,11 @@ export default function BulkUploadPage() {
 
         {stage === 'previewing' && (
           <>
+            {hashWarn && (
+              <div className="alert alert-error" style={{ marginBottom: '1rem', fontSize: '0.8rem' }}>
+                <span>⚠️</span>{hashWarn}
+              </div>
+            )}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.25rem', flexWrap: 'wrap', gap: '0.75rem' }}>
               <div>
                 <p style={{ fontFamily: 'var(--font-display)', fontSize: '1.15rem' }}>
@@ -437,7 +458,7 @@ export default function BulkUploadPage() {
             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
               <button
                 className="btn btn-outline"
-                onClick={() => { items.forEach(it => URL.revokeObjectURL(it.preview)); setStage('idle'); setItems([]); setProgress(0); setError(''); }}
+                onClick={() => { items.forEach(it => URL.revokeObjectURL(it.preview)); setStage('idle'); setItems([]); setProgress(0); setError(''); setHashWarn(''); }}
               >
                 Nova importação
               </button>
