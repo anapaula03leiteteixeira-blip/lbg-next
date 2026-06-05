@@ -4,7 +4,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import type { Produto, Categoria, Qualidade, Angulo, Fundo, Material } from "@/types";
 import { Search, Save, Trash2 } from "lucide-react";
 
-const CATEGORIAS: Categoria[] = ["cuba","sanitario","flexivel","rejunte","acessorio","outro"];
+const CATEGORIAS: Categoria[] = ["cuba","sanitario","pastilha","flexivel","rejunte","acessorio","outro"];
 const QUALIDADES: Qualidade[] = ["excelente","boa","regular","ruim"];
 const ANGULOS:    Angulo[]    = ["frontal","lateral","superior","perspectiva","detalhe","conjunto","embalagem"];
 const FUNDOS:     Fundo[]     = ["branco","colorido","ambiente","transparente","outro"];

@@ -1,6 +1,6 @@
 # PRD — La Bella Griffe: Sistema de Catálogo de Produtos
 
-**Versão:** 4.2
+**Versão:** 4.3
 **Data:** 2026-06-05
 **Status:** Em produção
 **Owner:** Ana Paula Teixeira (anapaula03.leiteteixeira@gmail.com)
@@ -25,7 +25,8 @@ Usuários autenticados por email + senha com três perfis de acesso (admin, edit
 | v3 — Next.js | App web com auth, galeria, upload IA | Substituído | 2026-06-03 |
 | v4 — Next.js | Multi-foto, revisão, admin de usuários | Substituído | 2026-06-03 |
 | v4.1 — Next.js | Download de fotos no carrossel | Substituído | 2026-06-04 |
-| **v4.2 — Next.js** | **Upload em lote ZIP + dedup + catálogo LBG + melhorias catálogo** | **Em produção** | 2026-06-05 |
+| v4.2 — Next.js | Upload em lote ZIP + dedup + catálogo LBG + melhorias catálogo | Substituído | 2026-06-05 |
+| **v4.3 — Next.js** | **Correções UI: pastilha em todos os dropdowns, botão lote destacado, modal What's New, brand redesign (Playfair Display + paleta La Bella)** | **Em produção** | 2026-06-05 |
 
 ---
 
@@ -369,6 +370,9 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision):
 
 | Bug | Arquivo | Versão |
 |-----|---------|--------|
+| `"pastilha"` ausente em `CATEGORIAS` de `/novo`, `/editar`, `/revisar` — dropdown sem a categoria | `novo/page.tsx`, `editar/page.tsx`, `revisar/page.tsx` | v4.2→v4.3 |
+| Botão "Importar em Lote" pouco visível (btn-outline) → alterado para btn-gold | `novo/page.tsx` | v4.2→v4.3 |
+| Texto do usuário no footer da sidebar invisível (cor #1c1917 em fundo escuro) | `components/layout/Sidebar.tsx` | v4.2→v4.3 |
 | `file.name.rsplit` (método Python, não existe em JS) | `api/upload/route.ts` | v3→v4 |
 | Modelo `claude-opus-4-5` (ID inválido) | `api/upload/route.ts` | v3→v4 |
 | Bulk import sem SKU (skuHint não passado ao `/api/upload`) | `novo/bulk/page.tsx` | v4.1→v4.2 |
@@ -399,17 +403,51 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision):
 
 ## 13. Roadmap
 
+### Fase 0 — Qualidade e Correções (v4.3 — Concluído)
+
 | Prioridade | Feature | Esforço | Status |
 |-----------|---------|---------|--------|
-| Alta | Adicionar Gabi e funcionários via `/admin` | Imediato | Pendente |
+| Alta | Pastilha em todos os dropdowns de categoria | Pequeno | **Concluído v4.3** |
+| Alta | Botão "Importar em Lote" destacado (btn-gold) | Mínimo | **Concluído v4.3** |
+| Alta | Modal What's New ao entrar no sistema | Pequeno | **Concluído v4.3** |
+| Alta | Brand redesign: Playfair Display + paleta La Bella | Pequeno | **Concluído v4.3** |
+| Alta | QA: revisar log de erros de subida de produto | Médio | **Pendente QA** |
+
+### Fase 1 — lbg-next como Fonte de Verdade para Gabi (v4.4)
+
+| Prioridade | Feature | Esforço | Status |
+|-----------|---------|---------|--------|
+| Alta | Endpoint `/api/gabi/produtos` com filtros otimizados para Gabi | Pequeno | Pendente |
+| Alta | Endpoint `/api/gabi/produto/[sku]` — detalhe completo por SKU | Pequeno | Pendente |
+| Média | Enriquecer `descricao_marketing` dos 435 produtos (Claude Vision em lote) | Médio | Pendente |
+| Média | Adicionar Gabi e funcionários via `/admin` | Imediato | Pendente |
 | Alta | Trocar senha padrão `LBG@2026` | Imediato | Pendente |
-| Alta | Upload em lote via ZIP | Médio | **Concluído v4.2** |
-| Média | Expandir `sku-catalog.json` com mais SKUs | Pequeno | Parcial (60+ SKUs) |
-| Média | Download ZIP de seleção de fotos | Médio | Pendente |
-| Média | Relatório de importação por lote | Pequeno | Pendente |
+
+### Fase 2 — Agenda de Conteúdo (v4.5)
+
+| Prioridade | Feature | Esforço | Status |
+|-----------|---------|---------|--------|
+| Alta | Tabela `agenda_conteudo` no Supabase | Pequeno | Pendente |
+| Alta | Página `/agenda` — planejamento semanal/mensal | Médio | Pendente |
+| Alta | Endpoint `/api/agenda` para consulta da Gabi | Pequeno | Pendente |
+
+### Fase 3 — Integração Gabi ↔ lbg-next (v4.6)
+
+| Prioridade | Feature | Esforço | Status |
+|-----------|---------|---------|--------|
+| Alta | Gabi lê produtos de lbg-next (substitui PDFs do Drive) | Médio | Pendente |
+| Alta | Gabi usa `image_url` Cloudinary como fonte primária de imagem | Pequeno | Pendente |
+| Média | `*criar-post {SKU}` busca dados automáticos de lbg-next | Médio | Pendente |
+
+### Fase 4 — Pipeline Canva Automatizado (v5.0)
+
+| Prioridade | Feature | Esforço | Status |
+|-----------|---------|---------|--------|
+| Alta | Gabi marca agenda como "criado" após arte gerada | Pequeno | Pendente |
+| Média | Página `/agenda` exibe status das artes criadas | Médio | Pendente |
+| Baixa | Download ZIP de seleção de fotos | Médio | Pendente |
 | Baixa | Notificação WhatsApp ao cadastrar produto | Médio | Pendente |
-| Baixa | App mobile com câmera direta | Alto | Pendente |
 
 ---
 
-*Atualizado em 05/06/2026 — v4.2 | Next.js 14 + Supabase + Cloudinary + Anthropic*
+*Atualizado em 05/06/2026 — v4.3 | Next.js 14 + Supabase + Cloudinary + Anthropic*

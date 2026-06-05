@@ -17,7 +17,7 @@ const ALL_LINKS = [
 ];
 
 const ROLE_LABEL: Record<Role, string> = { admin:"Admin", editor:"Editor", viewer:"Visualizador" };
-const ROLE_COLOR: Record<Role, string> = { admin:"#92400e", editor:"#1e40af", viewer:"#374151" };
+const ROLE_COLOR: Record<Role, string> = { admin:"#fbbf24", editor:"#93c5fd", viewer:"#9ca3af" };
 
 export default function Sidebar() {
   const path = usePathname();
@@ -55,8 +55,8 @@ export default function Sidebar() {
 
       <div className="sidebar-footer">
         {user && (
-          <div style={{ padding:"0 0.5rem 0.625rem", borderBottom:"1px solid #e7e5e4", marginBottom:"0.5rem" }}>
-            <p style={{ fontSize:"0.8rem", fontWeight:600, color:"#1c1917", margin:0 }}>{user.name}</p>
+          <div style={{ padding:"0 0.5rem 0.625rem", borderBottom:"1px solid rgba(200,200,200,0.12)", marginBottom:"0.5rem" }}>
+            <p style={{ fontSize:"0.8rem", fontWeight:600, color:"#e7e5e4", margin:0 }}>{user.name}</p>
             <span style={{ fontSize:"0.7rem", fontWeight:600, color: ROLE_COLOR[user.role] }}>
               {ROLE_LABEL[user.role]}
             </span>

@@ -5,7 +5,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import type { ClassificacaoIA, Categoria, Qualidade, Angulo, Fundo, Material } from "@/types";
 import { Upload, Sparkles, Save, CheckCircle, Package } from "lucide-react";
 
-const CATEGORIAS: Categoria[] = ["cuba","sanitario","flexivel","rejunte","acessorio","outro"];
+const CATEGORIAS: Categoria[] = ["cuba","sanitario","pastilha","flexivel","rejunte","acessorio","outro"];
 const QUALIDADES: Qualidade[] = ["excelente","boa","regular","ruim"];
 const ANGULOS:    Angulo[]    = ["frontal","lateral","superior","perspectiva","detalhe","conjunto","embalagem"];
 const FUNDOS:     Fundo[]     = ["branco","colorido","ambiente","transparente","outro"];
@@ -103,8 +103,8 @@ export default function NovoProdutoPage() {
     <AppLayout>
       <div className="topbar">
         <h1 className="page-title">Novo Produto</h1>
-        <Link href="/novo/bulk" className="btn btn-outline btn-sm">
-          <Package size={14} />
+        <Link href="/novo/bulk" className="btn btn-gold" style={{ fontWeight: 600, letterSpacing: '0.02em' }}>
+          <Package size={15} />
           Importar em Lote
         </Link>
       </div>

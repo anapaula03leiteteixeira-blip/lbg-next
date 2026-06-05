@@ -1,11 +1,11 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,500;0,600;0,700;1,500&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --font-display: 'Cormorant Garamond', serif;
+  --font-display: 'Playfair Display', 'Cormorant Garamond', serif;
   --font-body:    'DM Sans', sans-serif;
 
   --bg:           #fafaf9;
@@ -15,9 +15,11 @@
   --muted:        #78716c;
   --accent:       #b45309;
   --accent-light: #fef3c7;
-  --sidebar:      #1c1917;
+  /* Marca La Bella Griffe */
+  --sidebar:      #111111;
   --sidebar-text: #e7e5e4;
   --sidebar-muted:#a8a29e;
+  --lbg-silver:   #C8C8C8;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -56,7 +58,7 @@ body {
 }
 .sidebar-logo {
   padding:     0 1.5rem 2rem;
-  border-bottom: 1px solid #2d2926;
+  border-bottom: 1px solid rgba(200,200,200,0.12);
 }
 .sidebar-logo h1 {
   font-family: var(--font-display);
@@ -103,13 +105,13 @@ body {
   background:  rgba(255,255,255,0.05);
 }
 .nav-link.active {
-  color:       #fbbf24;
-  border-left-color: #fbbf24;
-  background:  rgba(251,191,36,0.08);
+  color:       var(--lbg-silver);
+  border-left-color: var(--lbg-silver);
+  background:  rgba(200,200,200,0.08);
 }
 .sidebar-footer {
   padding: 1.5rem;
-  border-top: 1px solid #2d2926;
+  border-top: 1px solid rgba(200,200,200,0.12);
   font-size: 0.75rem;
   color: #57534e;
 }

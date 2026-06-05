@@ -1,0 +1,26 @@
+{
+  "version": "4.2",
+  "releaseDate": "2026-06-05",
+  "features": [
+    {
+      "icon": "📦",
+      "title": "Importação em Lote via ZIP",
+      "description": "Cadastre múltiplos produtos de uma vez. Arraste um arquivo ZIP com suas fotos, veja o preview com detecção de duplicatas (🟢 Novo / 🟡 Verificar / 🔴 Duplicado) e importe tudo de uma vez."
+    },
+    {
+      "icon": "🔍",
+      "title": "Detecção de Duplicatas por SHA-256",
+      "description": "O sistema verifica automaticamente se uma imagem já foi cadastrada, comparando o hash da foto — mesmo que o nome do arquivo seja diferente."
+    },
+    {
+      "icon": "🏷️",
+      "title": "Catálogo SKU Inteligente",
+      "description": "Ao importar em lote, o sistema reconhece automaticamente o SKU pelo nome da pasta ou arquivo e sugere o nome do produto com base no catálogo LBG."
+    },
+    {
+      "icon": "📋",
+      "title": "Log de Erros Detalhado",
+      "description": "Se alguma foto falhar durante a importação, você verá o erro exato por arquivo — e pode copiar o log completo para análise."
+    }
+  ]
+}
