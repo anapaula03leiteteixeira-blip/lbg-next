@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createHash } from "crypto";
 import { v2 as cloudinary } from "cloudinary";
 import Anthropic from "@anthropic-ai/sdk";
 import skuCatalog from "@/data/sku-catalog.json";
@@ -31,9 +32,10 @@ export async function POST(req: NextRequest) {
     if (!file) return NextResponse.json({ error: "Nenhum arquivo enviado" }, { status: 400 });
     if (file.size > 10 * 1024 * 1024) return NextResponse.json({ error: "Arquivo muito grande (máx 10MB)" }, { status: 400 });
 
-    const bytes  = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    const base64 = buffer.toString("base64");
+    const bytes      = await file.arrayBuffer();
+    const buffer     = Buffer.from(bytes);
+    const base64     = buffer.toString("base64");
+    const hash_sha256 = createHash('sha256').update(buffer).digest('hex');
 
     const ext = file.name.split(".").pop()?.toLowerCase() ?? "jpg";
     const mediaMap: Record<string, string> = { jpg:"image/jpeg", jpeg:"image/jpeg", png:"image/png", webp:"image/webp" };
@@ -134,7 +136,9 @@ JSON esperado:
 
     return NextResponse.json({
       classificacao,
-      image_url: uploadResult.secure_url,
+      image_url:        uploadResult.secure_url,
+      hash_sha256,
+      arquivo_original: file.name,
     });
 
   } catch (e: unknown) {

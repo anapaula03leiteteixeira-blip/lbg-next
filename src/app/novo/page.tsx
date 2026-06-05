@@ -65,7 +65,7 @@ export default function NovoProdutoPage() {
       if (!res.ok) throw new Error(data.error ?? "Erro na classificação");
 
       setAiResult(data.classificacao);
-      setForm({ ...data.classificacao, image_url: data.image_url });
+      setForm({ ...data.classificacao, image_url: data.image_url, hash_sha256: data.hash_sha256, arquivo_original: data.arquivo_original });
       setStep(3);
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : "Erro desconhecido");
