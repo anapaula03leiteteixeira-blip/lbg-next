@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createHash } from "crypto";
 import Anthropic from "@anthropic-ai/sdk";
 import skuCatalog from "@/data/sku-catalog.json";
-import cloudinary from "@/lib/cloudinary";          // L2: config + validação compartilhados
+import cloudinary, { assertCloudinaryConfigured } from "@/lib/cloudinary";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { signCloudinaryUrl } from "@/lib/cloudinary-sign";
 
@@ -14,15 +14,18 @@ interface CatalogEntry {
   tags: string[];
 }
 
-// L2 — ANTHROPIC_API_KEY ainda é específico desta rota
-if (!process.env.ANTHROPIC_API_KEY) throw new Error('[upload] Missing required environment variable: ANTHROPIC_API_KEY');
-
 const ALLOWED_EXTS = new Set(['jpg', 'jpeg', 'png', 'webp']);
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
 
 export async function POST(req: NextRequest) {
   try {
+    // L2 — validar credenciais na primeira requisição (falha rápida e mensagem clara)
+    assertCloudinaryConfigured();
+    if (!process.env.ANTHROPIC_API_KEY) {
+      return NextResponse.json({ error: '[upload] ANTHROPIC_API_KEY não configurada' }, { status: 503 });
+    }
+
     // M5 — rate limiting: 10 uploads/min per IP
     const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
             ?? req.headers.get('x-real-ip')

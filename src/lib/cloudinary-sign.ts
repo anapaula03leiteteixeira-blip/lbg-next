@@ -18,9 +18,13 @@ export function signCloudinaryUrl(secureUrl: string, ttlSeconds = TTL_SECONDS): 
   const publicId = extractPublicId(secureUrl);
   if (!publicId) return secureUrl;
 
-  return cloudinary.url(publicId, {
-    sign_url:   true,
-    expires_at: Math.floor(Date.now() / 1000) + ttlSeconds,
-    secure:     true,
-  });
+  try {
+    return cloudinary.url(publicId, {
+      sign_url:   true,
+      expires_at: Math.floor(Date.now() / 1000) + ttlSeconds,
+      secure:     true,
+    });
+  } catch {
+    return secureUrl; // fallback: cloudinary não configurado ou erro de assinatura
+  }
 }
