@@ -3,8 +3,71 @@ import { useState, useRef } from 'react';
 import JSZip from 'jszip';
 import Link from 'next/link';
 import AppLayout from '@/components/layout/AppLayout';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronUp } from 'lucide-react';
 import type { ClassificacaoIA } from '@/types';
+
+function HowItWorksBulk() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{ background:'#fafaf9', border:'1px solid #e7e5e4', borderRadius:10, marginBottom:'1.25rem', overflow:'hidden' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0.875rem 1.125rem', background:'none', border:'none', cursor:'pointer', textAlign:'left' }}
+      >
+        <span style={{ display:'flex', alignItems:'center', gap:'0.5rem', fontWeight:600, fontSize:'0.875rem' }}>
+          <span style={{ fontSize:'1rem' }}>💡</span> Como funciona a importação em lote
+        </span>
+        {open ? <ChevronUp size={16} color="#78716c" /> : <ChevronDown size={16} color="#78716c" />}
+      </button>
+
+      {open && (
+        <div style={{ padding:'0 1.125rem 1rem', display:'flex', flexDirection:'column', gap:'0.875rem' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:'0.625rem' }}>
+            {[
+              { n:'1', icon:'🗂️', title:'Organize as fotos', desc:'Crie uma pasta por SKU com todas as fotos daquele produto. Renomeie os arquivos para incluir o SKU (ex: LBG100-frontal.jpg).' },
+              { n:'2', icon:'📦', title:'Compacte em ZIP', desc:'Compacte a pasta inteira em um arquivo .zip. Subpastas de até 1 nível são aceitas (ZIP > SKU > fotos).' },
+              { n:'3', icon:'🔍', title:'Revise antes de importar', desc:'O sistema detecta duplicatas automaticamente por hash SHA-256. Fotos já existentes ficam marcadas em vermelho.' },
+              { n:'4', icon:'🚀', title:'Importe com IA', desc:'Cada foto selecionada é enviada para o Claude Vision, que preenche todos os metadados automaticamente.' },
+            ].map(s => (
+              <div key={s.n} style={{ background:'white', border:'1px solid #e7e5e4', borderRadius:8, padding:'0.75rem', display:'flex', flexDirection:'column', gap:'0.3rem' }}>
+                <div style={{ display:'flex', alignItems:'center', gap:'0.5rem', marginBottom:'0.2rem' }}>
+                  <span style={{ background:'#111111', color:'white', width:18, height:18, borderRadius:'50%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'0.65rem', fontWeight:700, flexShrink:0 }}>{s.n}</span>
+                  <span style={{ fontSize:'1rem' }}>{s.icon}</span>
+                  <strong style={{ fontSize:'0.75rem' }}>{s.title}</strong>
+                </div>
+                <p style={{ fontSize:'0.73rem', color:'#78716c', lineHeight:1.55, margin:0 }}>{s.desc}</p>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:'0.625rem' }}>
+            <div style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:8, padding:'0.75rem', fontSize:'0.78rem', color:'#92400e' }}>
+              <strong>📁 Estrutura recomendada do ZIP:</strong>
+              <pre style={{ margin:'0.5rem 0 0', fontFamily:'monospace', fontSize:'0.72rem', lineHeight:1.6, background:'none' }}>{`fotos.zip
+├── LBG100/
+│   ├── LBG100-frontal.jpg
+│   └── LBG100-detalhe.jpg
+├── LBG200/
+│   └── LBG200-frontal.jpg
+└── LBG300-frontal.jpg`}</pre>
+            </div>
+            <div style={{ display:'flex', flexDirection:'column', gap:'0.5rem' }}>
+              <div style={{ background:'#dcfce7', border:'1px solid #bbf7d0', borderRadius:8, padding:'0.625rem 0.875rem', fontSize:'0.78rem', color:'#166534' }}>
+                <strong>🟢 Novo</strong> — foto não existe no catálogo. Será importada.
+              </div>
+              <div style={{ background:'#fef9c3', border:'1px solid #fde68a', borderRadius:8, padding:'0.625rem 0.875rem', fontSize:'0.78rem', color:'#854d0e' }}>
+                <strong>🟡 Verificar</strong> — nome igual a arquivo já cadastrado. Confirme se é diferente.
+              </div>
+              <div style={{ background:'#fee2e2', border:'1px solid #fecaca', borderRadius:8, padding:'0.625rem 0.875rem', fontSize:'0.78rem', color:'#991b1b' }}>
+                <strong>🔴 Duplicado</strong> — hash idêntico. Foto já está no catálogo. Desmarcada por padrão.
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 type BulkStage = 'idle' | 'extracting' | 'previewing' | 'processing' | 'done';
 type DupStatus  = 'novo' | 'possivel' | 'duplicado';
@@ -278,6 +341,7 @@ export default function BulkUploadPage() {
       </div>
 
       <div className="page-content" style={{ maxWidth: 960 }}>
+        <HowItWorksBulk />
 
         {stage === 'idle' && (
           <>
