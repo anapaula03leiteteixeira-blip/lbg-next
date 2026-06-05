@@ -18,16 +18,17 @@ interface CatalogEntry {
 }
 
 interface BulkItem {
-  name:        string;
-  file:        File;
-  preview:     string;
-  hash:        string;
-  skuHint:     string;
-  nomeHint:    string;
-  dupStatus:   DupStatus;
-  selected:    boolean;
-  procStatus:  ProcStatus;
-  error?:      string;
+  name:         string;
+  relativePath: string;
+  file:         File;
+  preview:      string;
+  hash:         string;
+  skuHint:      string;
+  nomeHint:     string;
+  dupStatus:    DupStatus;
+  selected:     boolean;
+  procStatus:   ProcStatus;
+  error?:       string;
 }
 
 interface UploadResponse {
@@ -105,6 +106,11 @@ export default function BulkUploadPage() {
       setError('Selecione um arquivo ZIP.');
       return;
     }
+    const MAX_ZIP_MB = 200;
+    if (zipFile.size > MAX_ZIP_MB * 1024 * 1024) {
+      setError(`Arquivo ZIP muito grande (máx ${MAX_ZIP_MB}MB). Divida em lotes menores.`);
+      return;
+    }
     setError('');
     setStage('extracting');
     setProgress(0);
@@ -160,10 +166,10 @@ export default function BulkUploadPage() {
         const nomeHint    = catalogHit ? catalogHit.nome   : '';
 
         let dupStatus: DupStatus = 'novo';
-        if (hashSet.has(hash))          dupStatus = 'duplicado';
-        else if (nameSet.has(filename)) dupStatus = 'possivel';
+        if (hashSet.has(hash))               dupStatus = 'duplicado';
+        else if (nameSet.has(relativePath))  dupStatus = 'possivel';
 
-        newItems.push({ name: filename, file, preview, hash, skuHint: finalSku, nomeHint, dupStatus, selected: dupStatus !== 'duplicado', procStatus: 'waiting' });
+        newItems.push({ name: filename, relativePath, file, preview, hash, skuHint: finalSku, nomeHint, dupStatus, selected: dupStatus !== 'duplicado', procStatus: 'waiting' });
         setProgress(Math.round(((i + 1) / entries.length) * 100));
       }
 
@@ -219,7 +225,7 @@ export default function BulkUploadPage() {
           ...upData.classificacao,
           image_url:        upData.image_url,
           hash_sha256:      item.hash,
-          arquivo_original: item.name,
+          arquivo_original: item.relativePath,
         };
 
         const saveRes  = await fetch('/api/produtos', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(produto) });
@@ -431,7 +437,7 @@ export default function BulkUploadPage() {
             <div style={{ display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
               <button
                 className="btn btn-outline"
-                onClick={() => { setStage('idle'); setItems([]); setProgress(0); setError(''); }}
+                onClick={() => { items.forEach(it => URL.revokeObjectURL(it.preview)); setStage('idle'); setItems([]); setProgress(0); setError(''); }}
               >
                 Nova importação
               </button>

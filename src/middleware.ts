@@ -4,7 +4,7 @@ import { jwtVerify } from "jose";
 const SECRET       = new TextEncoder().encode(process.env.NEXTAUTH_SECRET ?? "change-me");
 const PUBLIC       = ["/login", "/api/auth/login"];
 const ADMIN_ONLY   = ["/admin", "/api/admin"];
-const EDITOR_ONLY  = ["/novo", "/editar", "/revisar", "/api/upload"];
+const EDITOR_ONLY  = ["/novo", "/editar", "/revisar", "/api/upload", "/api/produtos"];
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;

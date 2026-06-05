@@ -25,7 +25,7 @@ export interface AuthUser {
 }
 
 export type Qualidade = "excelente" | "boa" | "regular" | "ruim";
-export type Categoria = "cuba" | "sanitario" | "flexivel" | "rejunte" | "acessorio" | "outro";
+export type Categoria = "cuba" | "sanitario" | "flexivel" | "rejunte" | "acessorio" | "pastilha" | "outro";
 export type Angulo    = "frontal" | "lateral" | "superior" | "perspectiva" | "detalhe" | "conjunto" | "embalagem";
 export type Fundo     = "branco" | "colorido" | "ambiente" | "transparente" | "outro";
 export type Material  = "louca" | "aco_inox" | "plastico" | "ceramica" | "metal" | "borracha" | "outro";
