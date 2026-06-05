@@ -15,6 +15,7 @@ interface BulkItem {
   file:       File;
   preview:    string;
   hash:       string;
+  skuHint:    string;
   dupStatus:  DupStatus;
   selected:   boolean;
   procStatus: ProcStatus;
@@ -42,6 +43,18 @@ const PROC_ICON: Record<ProcStatus, string> = {
   ok:         '✅',
   erro:       '❌',
 };
+
+function extractSkuHint(relativePath: string, filename: string): string {
+  const parts = relativePath.split('/');
+  // Folder name → SKU (e.g. LBG100/frontal.jpg → LBG100)
+  if (parts.length >= 2 && parts[0].trim()) {
+    return parts[0].trim();
+  }
+  // Filename prefix before first - or _ (e.g. LBG100-frontal.jpg → LBG100)
+  const nameWithoutExt = filename.replace(/\.[^.]+$/, '');
+  const match = nameWithoutExt.match(/^([A-Za-z0-9]+)/);
+  return match ? match[1] : '';
+}
 
 async function sha256Hex(buffer: ArrayBuffer): Promise<string> {
   const hash = await crypto.subtle.digest('SHA-256', buffer);
@@ -73,7 +86,7 @@ export default function BulkUploadPage() {
     try {
       const zip = await JSZip.loadAsync(zipFile);
 
-      type Entry = { entry: JSZip.JSZipObject; filename: string };
+      type Entry = { entry: JSZip.JSZipObject; filename: string; relativePath: string };
       const entries: Entry[] = [];
 
       zip.forEach((relativePath, entry) => {
@@ -85,7 +98,7 @@ export default function BulkUploadPage() {
         if (parts.length - 1 > 1) return;
         const ext = filename.split('.').pop()?.toLowerCase() ?? '';
         if (!ACCEPTED_EXTS.has(ext)) return;
-        entries.push({ entry, filename });
+        entries.push({ entry, filename, relativePath });
       });
 
       if (entries.length === 0) {
@@ -108,19 +121,20 @@ export default function BulkUploadPage() {
       const newItems: BulkItem[] = [];
 
       for (let i = 0; i < entries.length; i++) {
-        const { entry, filename } = entries[i];
-        const ext     = filename.split('.').pop()?.toLowerCase() ?? 'jpg';
-        const mime    = MIME_MAP[ext] ?? 'image/jpeg';
-        const bytes   = await entry.async('arraybuffer');
-        const hash    = await sha256Hex(bytes);
-        const file    = new File([bytes], filename, { type: mime });
-        const preview = URL.createObjectURL(new Blob([bytes], { type: mime }));
+        const { entry, filename, relativePath } = entries[i];
+        const ext      = filename.split('.').pop()?.toLowerCase() ?? 'jpg';
+        const mime     = MIME_MAP[ext] ?? 'image/jpeg';
+        const bytes    = await entry.async('arraybuffer');
+        const hash     = await sha256Hex(bytes);
+        const file     = new File([bytes], filename, { type: mime });
+        const preview  = URL.createObjectURL(new Blob([bytes], { type: mime }));
+        const skuHint  = extractSkuHint(relativePath, filename);
 
         let dupStatus: DupStatus = 'novo';
         if (hashSet.has(hash))          dupStatus = 'duplicado';
         else if (nameSet.has(filename)) dupStatus = 'possivel';
 
-        newItems.push({ name: filename, file, preview, hash, dupStatus, selected: dupStatus !== 'duplicado', procStatus: 'waiting' });
+        newItems.push({ name: filename, file, preview, hash, skuHint, dupStatus, selected: dupStatus !== 'duplicado', procStatus: 'waiting' });
         setProgress(Math.round(((i + 1) / entries.length) * 100));
       }
 
@@ -167,6 +181,7 @@ export default function BulkUploadPage() {
       try {
         const fd = new FormData();
         fd.append('file', item.file);
+        if (item.skuHint) fd.append('sku', item.skuHint);
         const upRes  = await fetch('/api/upload', { method: 'POST', body: fd });
         const upData = await upRes.json() as UploadResponse;
         if (!upRes.ok) throw new Error(upData.error ?? 'Erro no upload');
@@ -323,7 +338,12 @@ export default function BulkUploadPage() {
                       </span>
                     </div>
                     <div style={{ padding: '0.4rem 0.5rem' }}>
-                      <p style={{ fontSize: '0.65rem', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.skuHint && (
+                        <p style={{ fontSize: '0.65rem', fontWeight: 600, color: 'var(--accent)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginBottom: 1 }}>
+                          {item.skuHint}
+                        </p>
+                      )}
+                      <p style={{ fontSize: '0.6rem', color: 'var(--muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {item.name}
                       </p>
                     </div>
