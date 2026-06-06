@@ -4,10 +4,10 @@ import { Resend } from "resend";
 import { supabaseServer } from "@/lib/supabase";
 
 const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET ?? "change-me");
-const resend  = new Resend(process.env.RESEND_API_KEY);
 
 // ── POST: gerar e enviar magic link ──────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const resend = new Resend(process.env.RESEND_API_KEY);
   const body  = await req.json() as { email?: string };
   const email = (body.email ?? "").trim().toLowerCase();
 
