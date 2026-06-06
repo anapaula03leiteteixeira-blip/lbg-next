@@ -5,7 +5,7 @@ import type { Produto, Categoria, Material } from "@/types";
 import { Search, Save, Trash2 } from "lucide-react";
 
 const CATEGORIAS: Categoria[] = ["cuba","sanitario","pastilha","flexivel","rejunte","acessorio","outro"];
-const MATERIAIS:  Material[]  = ["louca","aco_inox","plastico","ceramica","metal","borracha","outro"];
+const MATERIAIS:  Material[]  = ["louca","aco_inox","plastico","ceramica","metal","borracha","vidro","outro"];
 
 export default function EditarProdutoPage() {
   const [produtos,   setProdutos]   = useState<Produto[]>([]);

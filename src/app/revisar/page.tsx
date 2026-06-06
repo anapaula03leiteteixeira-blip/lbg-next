@@ -9,7 +9,7 @@ const CATEGORIAS: Categoria[] = ["cuba","sanitario","pastilha","flexivel","rejun
 const QUALIDADES: Qualidade[] = ["excelente","boa","regular","ruim"];
 const ANGULOS:    Angulo[]    = ["frontal","lateral","superior","perspectiva","detalhe","conjunto","embalagem"];
 const FUNDOS:     Fundo[]     = ["branco","colorido","ambiente","transparente","outro"];
-const MATERIAIS:  Material[]  = ["louca","aco_inox","plastico","ceramica","metal","borracha","outro"];
+const MATERIAIS:  Material[]  = ["louca","aco_inox","plastico","ceramica","metal","borracha","vidro","outro"];
 
 function imgUrl(url: string | undefined) {
   if (!url) return null;

@@ -28,7 +28,7 @@ export type Qualidade = "excelente" | "boa" | "regular" | "ruim";
 export type Categoria = "cuba" | "sanitario" | "flexivel" | "rejunte" | "acessorio" | "pastilha" | "outro";
 export type Angulo    = "frontal" | "lateral" | "superior" | "perspectiva" | "detalhe" | "conjunto" | "embalagem";
 export type Fundo     = "branco" | "colorido" | "ambiente" | "transparente" | "outro";
-export type Material  = "louca" | "aco_inox" | "plastico" | "ceramica" | "metal" | "borracha" | "outro";
+export type Material  = "louca" | "aco_inox" | "plastico" | "ceramica" | "metal" | "borracha" | "vidro" | "outro";
 
 // Foto individual de um produto (N por SKU)
 export interface ProdutoImagem {

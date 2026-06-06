@@ -109,7 +109,7 @@ JSON esperado:
   "fundo": "branco|colorido|ambiente|transparente|outro",
   "qualidade_foto": "excelente|boa|regular|ruim",
   "problemas_foto": [],
-  "material_aparente": "louca|aco_inox|plastico|ceramica|metal|borracha|outro",
+  "material_aparente": "louca|aco_inox|plastico|ceramica|metal|borracha|vidro|outro",
   "tags": ["palavras-chave para busca"],
   "descricao_marketing": "frase atrativa, máx 120 chars",
   "descricao_tecnica": "descrição técnica objetiva",
