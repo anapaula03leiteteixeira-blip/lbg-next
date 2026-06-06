@@ -88,5 +88,6 @@ Padrão de nome: `{epicNum}.{storyNum}.story.md`
 | 0.2 Reset de senha via email | [0.2.reset-senha-email.story.md](active/0.2.reset-senha-email.story.md) | **Done** |
 | 0.3 Magic link | [0.3.magic-link.story.md](active/0.3.magic-link.story.md) | **Done** |
 | 1.1 API Gabi endpoints | [1.1.api-gabi-endpoints.story.md](active/1.1.api-gabi-endpoints.story.md) | **Done** |
-| 1.2 Enriquecimento marketing | [1.2.enriquecimento-descricao-marketing.story.md](active/1.2.enriquecimento-descricao-marketing.story.md) | Ready |
-| 1.4 Copies SEO | [1.4.copies-seo-plataformas.story.md](active/1.4.copies-seo-plataformas.story.md) | Ready |
+| 1.2 Enriquecimento marketing | [1.2.enriquecimento-descricao-marketing.story.md](active/1.2.enriquecimento-descricao-marketing.story.md) | Done |
+| 1.4 Copies SEO | [1.4.copies-seo-plataformas.story.md](active/1.4.copies-seo-plataformas.story.md) | Done |
+| 1.5 Refactor modelo produto-cêntrico | [1.5.refactor-produto-imagens.story.md](active/1.5.refactor-produto-imagens.story.md) | **Draft — BLOCKER** |

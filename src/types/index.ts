@@ -30,27 +30,54 @@ export type Angulo    = "frontal" | "lateral" | "superior" | "perspectiva" | "de
 export type Fundo     = "branco" | "colorido" | "ambiente" | "transparente" | "outro";
 export type Material  = "louca" | "aco_inox" | "plastico" | "ceramica" | "metal" | "borracha" | "outro";
 
-export interface Produto {
+// Foto individual de um produto (N por SKU)
+export interface ProdutoImagem {
   id:                  number;
+  sku:                 string;
+  image_url?:          string;
+  angulo?:             string;          // string: dados legados podem ter valores fora do enum
+  fundo?:              Fundo;
+  qualidade_foto?:     Qualidade;
+  cor_dominante?:      string;
+  material_aparente?:  string;
+  problemas_foto?:     string[];
+  precisa_revisao:     boolean;
+  hash_sha256?:        string;
+  arquivo_original?:   string;
+  processado_em?:      string;
+  criado_em?:          string;
+  // Enriquecido via JOIN com produtos (presente quando vem da API)
+  nome_produto?:       string;
+  categoria?:          Categoria;
+  subcategoria?:       string;
+  descricao_marketing?: string;
+  descricao_tecnica?:  string;
+  tags?:               string[];
+}
+
+// Produto master — 1 por SKU
+export interface Produto {
   sku:                 string;
   nome_produto:        string;
   categoria:           Categoria;
   subcategoria?:       string;
   cor_dominante?:      string;
-  angulo?:             Angulo;
-  fundo?:              Fundo;
-  qualidade_foto?:     Qualidade;
   material_aparente?:  Material;
   tags?:               string[];
-  problemas_foto?:     string[];
   descricao_marketing?: string;
   descricao_tecnica?:  string;
-  precisa_revisao?:    boolean;
-  image_url?:          string;
-  hash_sha256?:        string;
-  arquivo_original?:   string;
-  processado_em?:      string;
   criado_em?:          string;
+  atualizado_em?:      string;
+  // Campos derivados da melhor imagem (retornados pela API)
+  image_url?:          string;
+  qualidade_foto?:     Qualidade;
+  precisa_revisao?:    boolean;
+  // Campos opcionais para compatibilidade com formulários de foto
+  angulo?:             Angulo;
+  fundo?:              Fundo;
+  problemas_foto?:     string[];
+  // Imagens embutidas
+  imagens?:            ProdutoImagem[];
 }
 
 export interface ProdutoGabi {

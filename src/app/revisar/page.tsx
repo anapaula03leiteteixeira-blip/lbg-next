@@ -2,7 +2,7 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
-import type { Produto, Categoria, Qualidade, Angulo, Fundo, Material } from "@/types";
+import type { Produto, ProdutoImagem, Categoria, Qualidade, Angulo, Fundo, Material } from "@/types";
 import { Check, X, RefreshCw, Search, AlertTriangle, ChevronLeft, ChevronRight } from "lucide-react";
 
 const CATEGORIAS: Categoria[] = ["cuba","sanitario","pastilha","flexivel","rejunte","acessorio","outro"];
@@ -21,40 +21,34 @@ function imgUrl(url: string | undefined) {
 
 function AtribuirModal({
   foto,
-  todos,
+  produtos,
   onClose,
   onSaved,
 }: {
-  foto:    Produto;
-  todos:   Produto[];
-  onClose: () => void;
-  onSaved: (updated: Produto) => void;
+  foto:     ProdutoImagem;
+  produtos: Produto[];
+  onClose:  () => void;
+  onSaved:  (updated: ProdutoImagem) => void;
 }) {
   const [search,  setSearch]  = useState("");
   const [saving,  setSaving]  = useState(false);
   const [error,   setError]   = useState("");
 
-  // SKUs únicos excluindo o próprio
-  const skuMap = new Map<string, Produto>();
-  for (const p of todos) {
-    if (p.sku !== foto.sku && !skuMap.has(p.sku)) skuMap.set(p.sku, p);
-  }
-  const options = Array.from(skuMap.values()).filter(p =>
-    !search || p.sku.toLowerCase().includes(search.toLowerCase()) || p.nome_produto.toLowerCase().includes(search.toLowerCase())
-  );
+  const options = produtos
+    .filter(p => p.sku !== foto.sku)
+    .filter(p =>
+      !search ||
+      p.sku.toLowerCase().includes(search.toLowerCase()) ||
+      p.nome_produto.toLowerCase().includes(search.toLowerCase()),
+    );
 
   async function atribuir(destino: Produto) {
     setSaving(true); setError("");
     try {
-      const res = await fetch(`/api/produtos/${foto.id}`, {
+      const res = await fetch(`/api/produto-imagens/${foto.id}`, {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({
-          sku:          destino.sku,
-          nome_produto: destino.nome_produto,
-          categoria:    destino.categoria,
-          precisa_revisao: false,
-        }),
+        body:    JSON.stringify({ sku: destino.sku, precisa_revisao: false }),
       });
       if (!res.ok) throw new Error(await res.text());
       const updated = await res.json();
@@ -116,21 +110,21 @@ function ReclassificarModal({
   onClose,
   onSaved,
 }: {
-  foto:    Produto;
+  foto:    ProdutoImagem;
   onClose: () => void;
-  onSaved: (updated: Produto) => void;
+  onSaved: (updated: ProdutoImagem) => void;
 }) {
-  const [form,   setForm]   = useState<Partial<Produto>>({ ...foto });
+  const [form,   setForm]   = useState<Partial<ProdutoImagem>>({ ...foto });
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState("");
 
-  const upd = (k: keyof Produto, v: unknown) => setForm(f => ({ ...f, [k]: v }));
+  const upd = (k: keyof ProdutoImagem, v: unknown) => setForm(f => ({ ...f, [k]: v }));
 
   async function save() {
     if (!form.sku?.trim() || !form.nome_produto?.trim()) { setError("SKU e Nome são obrigatórios"); return; }
     setSaving(true); setError("");
     try {
-      const res = await fetch(`/api/produtos/${foto.id}`, {
+      const res = await fetch(`/api/produto-imagens/${foto.id}`, {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ ...form, precisa_revisao: false }),
@@ -143,7 +137,7 @@ function ReclassificarModal({
     }
   }
 
-  const sel = (label: string, key: keyof Produto, options: string[]) => (
+  const sel = (label: string, key: keyof ProdutoImagem, options: string[]) => (
     <div>
       <p style={{ fontSize:"0.65rem", textTransform:"uppercase", letterSpacing:"0.1em", color:"#78716c", marginBottom:4 }}>{label}</p>
       <select
@@ -212,7 +206,7 @@ function ReclassificarModal({
 
 function FotoCard({
   foto,
-  todos,
+  produtos,
   idx,
   total,
   onPrev,
@@ -220,13 +214,13 @@ function FotoCard({
   onUpdated,
   onDeleted,
 }: {
-  foto:      Produto;
-  todos:     Produto[];
+  foto:      ProdutoImagem;
+  produtos:  Produto[];
   idx:       number;
   total:     number;
   onPrev:    () => void;
   onNext:    () => void;
-  onUpdated: (p: Produto) => void;
+  onUpdated: (p: ProdutoImagem) => void;
   onDeleted: (id: number) => void;
 }) {
   const [modal,   setModal]   = useState<"atribuir"|"reclassificar"|null>(null);
@@ -237,7 +231,7 @@ function FotoCard({
   async function aprovar() {
     setLoading(true); setError("");
     try {
-      const res = await fetch(`/api/produtos/${foto.id}`, {
+      const res = await fetch(`/api/produto-imagens/${foto.id}`, {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify({ precisa_revisao: false }),
@@ -253,7 +247,7 @@ function FotoCard({
   async function excluir() {
     setLoading(true); setError("");
     try {
-      const res = await fetch(`/api/produtos/${foto.id}`, { method:"DELETE" });
+      const res = await fetch(`/api/produto-imagens/${foto.id}`, { method:"DELETE" });
       if (!res.ok) throw new Error(await res.text());
       onDeleted(foto.id);
     } catch (e) {
@@ -270,7 +264,7 @@ function FotoCard({
         {/* Foto */}
         <div style={{ position:"relative", background:"#f5f5f4", height:220 }}>
           {src
-            ? <img src={src} alt={foto.nome_produto} style={{ width:"100%", height:"100%", objectFit:"contain" }} />
+            ? <img src={src} alt={foto.nome_produto ?? foto.sku} style={{ width:"100%", height:"100%", objectFit:"contain" }} />
             : <div style={{ height:"100%", display:"flex", alignItems:"center", justifyContent:"center", color:"#a8a29e" }}>📷 Sem imagem</div>
           }
           <div style={{ position:"absolute", top:8, right:8, background:"#fef3c7", border:"1px solid #fcd34d", borderRadius:6, padding:"2px 8px", fontSize:"0.7rem", fontWeight:600, color:"#92400e" }}>
@@ -291,7 +285,7 @@ function FotoCard({
         {/* Info */}
         <div style={{ padding:"0.875rem", flex:1, display:"flex", flexDirection:"column", gap:"0.375rem" }}>
           <code style={{ fontSize:"0.75rem", color:"#b45309" }}>{foto.sku || "SEM SKU"}</code>
-          <p style={{ fontWeight:500, fontSize:"0.9rem", margin:0 }}>{foto.nome_produto}</p>
+          <p style={{ fontWeight:500, fontSize:"0.9rem", margin:0 }}>{foto.nome_produto ?? ""}</p>
           <div style={{ display:"flex", gap:"0.375rem", flexWrap:"wrap", marginTop:2 }}>
             {foto.categoria && <span style={{ fontSize:"0.7rem", background:"#f5f5f4", borderRadius:4, padding:"1px 6px", textTransform:"capitalize" }}>{foto.categoria}</span>}
             {foto.angulo    && <span style={{ fontSize:"0.7rem", background:"#f5f5f4", borderRadius:4, padding:"1px 6px", textTransform:"capitalize" }}>📐 {foto.angulo}</span>}
@@ -307,50 +301,28 @@ function FotoCard({
 
         {/* Ações */}
         <div style={{ padding:"0.75rem", borderTop:"1px solid #f5f5f4", display:"flex", gap:"0.375rem", flexWrap:"wrap" }}>
-          <button
-            onClick={() => setModal("atribuir")}
-            disabled={loading}
-            className="btn btn-outline btn-sm"
-            style={{ flex:1, justifyContent:"center", fontSize:"0.78rem" }}
-            title="Vincular esta foto a um produto existente"
-          >
+          <button onClick={() => setModal("atribuir")} disabled={loading} className="btn btn-outline btn-sm"
+            style={{ flex:1, justifyContent:"center", fontSize:"0.78rem" }} title="Vincular esta foto a um produto existente">
             🔗 Atribuir
           </button>
-          <button
-            onClick={() => setModal("reclassificar")}
-            disabled={loading}
-            className="btn btn-outline btn-sm"
-            style={{ flex:1, justifyContent:"center", fontSize:"0.78rem" }}
-            title="Editar todos os campos desta foto"
-          >
+          <button onClick={() => setModal("reclassificar")} disabled={loading} className="btn btn-outline btn-sm"
+            style={{ flex:1, justifyContent:"center", fontSize:"0.78rem" }} title="Editar todos os campos desta foto">
             <RefreshCw size={12} /> Reclassificar
           </button>
-          <button
-            onClick={aprovar}
-            disabled={loading}
-            className="btn btn-sm"
+          <button onClick={aprovar} disabled={loading} className="btn btn-sm"
             style={{ flex:1, justifyContent:"center", background:"#dcfce7", color:"#166534", border:"1px solid #86efac", fontSize:"0.78rem" }}
-            title="Marcar como revisada (mantém os dados)"
-          >
+            title="Marcar como revisada (mantém os dados)">
             <Check size={12} /> Aprovar
           </button>
           {!confirm ? (
-            <button
-              onClick={() => setConfirm(true)}
-              disabled={loading}
-              className="btn btn-sm"
+            <button onClick={() => setConfirm(true)} disabled={loading} className="btn btn-sm"
               style={{ background:"#fee2e2", color:"#991b1b", border:"1px solid #fca5a5", fontSize:"0.78rem" }}
-              title="Excluir esta foto permanentemente"
-            >
+              title="Excluir esta foto permanentemente">
               <X size={12} />
             </button>
           ) : (
-            <button
-              onClick={excluir}
-              disabled={loading}
-              className="btn btn-sm"
-              style={{ background:"#dc2626", color:"white", fontSize:"0.78rem" }}
-            >
+            <button onClick={excluir} disabled={loading} className="btn btn-sm"
+              style={{ background:"#dc2626", color:"white", fontSize:"0.78rem" }}>
               Confirmar exclusão
             </button>
           )}
@@ -359,7 +331,7 @@ function FotoCard({
 
       {modal === "atribuir" && (
         <AtribuirModal
-          foto={foto} todos={todos}
+          foto={foto} produtos={produtos}
           onClose={() => setModal(null)}
           onSaved={p => { onUpdated(p); setModal(null); }}
         />
@@ -381,41 +353,48 @@ function RevisarContent() {
   const searchParams = useSearchParams();
   const highlightId  = searchParams.get("id");
 
-  const [todos,      setTodos]      = useState<Produto[]>([]);
+  const [revisao,    setRevisao]    = useState<ProdutoImagem[]>([]);
+  const [produtos,   setProdutos]   = useState<Produto[]>([]);
   const [loading,    setLoading]    = useState(true);
   const [navIdx,     setNavIdx]     = useState(0);
 
   useEffect(() => {
-    fetch("/api/produtos").then(r => r.json()).then(data => {
-      setTodos(data);
+    // Busca paralela: fotos para revisão + produtos para AtribuirModal
+    Promise.all([
+      fetch("/api/produto-imagens?revisao=true").then(r => r.json()),
+      fetch("/api/produtos").then(r => r.json()),
+    ]).then(([imagens, prods]) => {
+      const imgList = Array.isArray(imagens) ? imagens as ProdutoImagem[] : [];
+      setRevisao(imgList);
+      setProdutos(Array.isArray(prods) ? prods as Produto[] : []);
       setLoading(false);
-      // Se veio de um link direto, posiciona no item correto
+
+      // Se veio de link direto, posicionar no item correto
       if (highlightId) {
-        const revisao = (data as Produto[]).filter(p => p.precisa_revisao);
-        const i = revisao.findIndex(p => String(p.id) === highlightId);
+        const i = imgList.findIndex(p => String(p.id) === highlightId);
         if (i >= 0) setNavIdx(i);
       }
     }).catch(() => setLoading(false));
   }, [highlightId]);
 
-  const revisao = todos.filter(p => p.precisa_revisao);
+  // Fotos ainda pendentes (pode mudar após aprovar/atribuir)
+  const pendentes = revisao.filter(p => p.precisa_revisao);
 
-  function handleUpdated(updated: Produto) {
-    setTodos(prev => prev.map(p => p.id === updated.id ? updated : p));
-    // Avança para próximo se ainda houver itens
-    setNavIdx(i => Math.min(i, revisao.filter(p => p.id !== updated.id).length - 1));
+  function handleUpdated(updated: ProdutoImagem) {
+    setRevisao(prev => prev.map(p => p.id === updated.id ? updated : p));
+    setNavIdx(i => Math.min(i, pendentes.filter(p => p.id !== updated.id).length - 1));
   }
 
   function handleDeleted(id: number) {
-    setTodos(prev => prev.filter(p => p.id !== id));
+    setRevisao(prev => prev.filter(p => p.id !== id));
     setNavIdx(i => Math.max(0, i - 1));
   }
 
   // Paginação: 6 por página
   const PAGE = 6;
   const page      = Math.floor(navIdx / PAGE);
-  const pageItems = revisao.slice(page * PAGE, (page + 1) * PAGE);
-  const totalPages = Math.ceil(revisao.length / PAGE);
+  const pageItems = pendentes.slice(page * PAGE, (page + 1) * PAGE);
+  const totalPages = Math.ceil(pendentes.length / PAGE);
 
   return (
     <AppLayout>
@@ -423,7 +402,7 @@ function RevisarContent() {
         <div>
           <h1 className="page-title">Fila de Revisão</h1>
           {!loading && <p style={{ fontSize:"0.8rem", color:"#78716c", marginTop:2 }}>
-            {revisao.length === 0 ? "Nenhuma foto pendente 🎉" : `${revisao.length} foto${revisao.length !== 1 ? "s" : ""} aguardando revisão`}
+            {pendentes.length === 0 ? "Nenhuma foto pendente 🎉" : `${pendentes.length} foto${pendentes.length !== 1 ? "s" : ""} aguardando revisão`}
           </p>}
         </div>
       </div>
@@ -441,7 +420,7 @@ function RevisarContent() {
               </div>
             ))}
           </div>
-        ) : revisao.length === 0 ? (
+        ) : pendentes.length === 0 ? (
           <div style={{ textAlign:"center", padding:"5rem", color:"#78716c" }}>
             <div style={{ fontSize:"3rem", marginBottom:"1rem" }}>✅</div>
             <p style={{ fontFamily:"var(--font-display)", fontSize:"1.4rem", marginBottom:"0.5rem" }}>Fila de revisão vazia!</p>
@@ -462,11 +441,11 @@ function RevisarContent() {
                 <FotoCard
                   key={foto.id}
                   foto={foto}
-                  todos={todos}
+                  produtos={produtos}
                   idx={page * PAGE + i}
-                  total={revisao.length}
+                  total={pendentes.length}
                   onPrev={() => setNavIdx(n => Math.max(0, n - 1))}
-                  onNext={() => setNavIdx(n => Math.min(revisao.length - 1, n + 1))}
+                  onNext={() => setNavIdx(n => Math.min(pendentes.length - 1, n + 1))}
                   onUpdated={handleUpdated}
                   onDeleted={handleDeleted}
                 />

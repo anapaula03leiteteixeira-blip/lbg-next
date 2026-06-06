@@ -27,22 +27,32 @@ export async function GET(
 
   try {
     const { sku } = await params;
-
     const sb = supabaseServer();
-    const { data, error } = await sb
+
+    // Buscar produto master
+    const { data: produto, error: prodErr } = await sb
       .from("produtos")
       .select("*")
       .eq("sku", sku)
       .single();
 
-    if (error) {
-      if (error.code === "PGRST116") {
+    if (prodErr) {
+      if (prodErr.code === "PGRST116") {
         return NextResponse.json({ error: "Produto não encontrado" }, { status: 404 });
       }
-      throw error;
+      throw prodErr;
     }
 
-    return NextResponse.json(data);
+    // Buscar todas as imagens do SKU
+    const { data: imagens, error: imgErr } = await sb
+      .from("produto_imagens")
+      .select("id, image_url, angulo, fundo, qualidade_foto, cor_dominante, material_aparente, problemas_foto, precisa_revisao, arquivo_original, criado_em")
+      .eq("sku", sku)
+      .order("criado_em", { ascending: true });
+
+    if (imgErr) throw imgErr;
+
+    return NextResponse.json({ ...produto, imagens: imagens ?? [] });
   } catch (e: unknown) {
     const msg = e instanceof Error
       ? e.message

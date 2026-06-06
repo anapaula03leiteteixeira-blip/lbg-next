@@ -1,13 +1,10 @@
 "use client";
 import { useState, useEffect } from "react";
 import AppLayout from "@/components/layout/AppLayout";
-import type { Produto, Categoria, Qualidade, Angulo, Fundo, Material } from "@/types";
+import type { Produto, Categoria, Material } from "@/types";
 import { Search, Save, Trash2 } from "lucide-react";
 
 const CATEGORIAS: Categoria[] = ["cuba","sanitario","pastilha","flexivel","rejunte","acessorio","outro"];
-const QUALIDADES: Qualidade[] = ["excelente","boa","regular","ruim"];
-const ANGULOS:    Angulo[]    = ["frontal","lateral","superior","perspectiva","detalhe","conjunto","embalagem"];
-const FUNDOS:     Fundo[]     = ["branco","colorido","ambiente","transparente","outro"];
 const MATERIAIS:  Material[]  = ["louca","aco_inox","plastico","ceramica","metal","borracha","outro"];
 
 export default function EditarProdutoPage() {
@@ -45,7 +42,7 @@ export default function EditarProdutoPage() {
     if (!selected) return;
     setSaving(true); setError(""); setSuccess("");
     try {
-      const res = await fetch(`/api/produtos/${selected.id}`, {
+      const res = await fetch(`/api/produtos/${selected.sku}`, {
         method:  "PATCH",
         headers: { "Content-Type": "application/json" },
         body:    JSON.stringify(form),
@@ -53,7 +50,7 @@ export default function EditarProdutoPage() {
       if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
       setSuccess("Produto atualizado com sucesso!");
       // Atualiza lista local
-      setProdutos(prev => prev.map(p => p.id === selected.id ? { ...p, ...form } as Produto : p));
+      setProdutos(prev => prev.map(p => p.sku === selected.sku ? { ...p, ...form } as Produto : p));
     } catch(e: unknown) {
       setError(e instanceof Error ? e.message : "Erro ao salvar");
     } finally { setSaving(false); }
@@ -66,9 +63,9 @@ export default function EditarProdutoPage() {
     }
     setDeleting(true); setError("");
     try {
-      const res = await fetch(`/api/produtos/${selected.id}`, { method: "DELETE" });
+      const res = await fetch(`/api/produtos/${selected.sku}`, { method: "DELETE" });
       if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
-      setProdutos(prev => prev.filter(p => p.id !== selected.id));
+      setProdutos(prev => prev.filter(p => p.sku !== selected.sku));
       setSelected(null); setForm({}); setSearch(""); setConfirmDel("");
       setSuccess("Produto excluído.");
     } catch(e: unknown) {
@@ -98,7 +95,7 @@ export default function EditarProdutoPage() {
             <div style={{ position: "absolute", top: "100%", left: 0, right: 0, background: "white", border: "1px solid #e7e5e4", borderRadius: 8, boxShadow: "0 8px 24px rgba(0,0,0,0.1)", zIndex: 20, maxHeight: 280, overflowY: "auto" }}>
               {results.slice(0, 15).map(p => (
                 <button
-                  key={p.id}
+                  key={p.sku}
                   onClick={() => select(p)}
                   style={{ width: "100%", padding: "0.75rem 1rem", display: "flex", alignItems: "center", gap: "1rem", border: "none", background: "none", cursor: "pointer", textAlign: "left" }}
                   onMouseEnter={e => (e.currentTarget.style.background = "#fafaf9")}
@@ -148,8 +145,8 @@ export default function EditarProdutoPage() {
             <div style={{ display: "flex", flexDirection: "column", gap: "0.875rem" }}>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.875rem" }}>
                 <div className="input-group" style={{ gridColumn: "1/-1" }}>
-                  <label className="input-label">SKU *</label>
-                  <input className="input-field" value={form.sku ?? ""} onChange={e => upd("sku", e.target.value)} />
+                  <label className="input-label">SKU</label>
+                  <input className="input-field" value={form.sku ?? ""} readOnly style={{ background: "#f5f5f4", cursor: "not-allowed", color: "#78716c" }} />
                 </div>
                 <div className="input-group" style={{ gridColumn: "1/-1" }}>
                   <label className="input-label">Nome *</label>
@@ -159,18 +156,6 @@ export default function EditarProdutoPage() {
                   <label className="input-label">Categoria</label>
                   <select className="input-field" value={form.categoria ?? ""} onChange={e => upd("categoria", e.target.value)}>
                     {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div className="input-group">
-                  <label className="input-label">Qualidade</label>
-                  <select className="input-field" value={form.qualidade_foto ?? ""} onChange={e => upd("qualidade_foto", e.target.value)}>
-                    {QUALIDADES.map(q => <option key={q} value={q}>{q}</option>)}
-                  </select>
-                </div>
-                <div className="input-group">
-                  <label className="input-label">Ângulo</label>
-                  <select className="input-field" value={form.angulo ?? ""} onChange={e => upd("angulo", e.target.value)}>
-                    {ANGULOS.map(a => <option key={a} value={a}>{a}</option>)}
                   </select>
                 </div>
                 <div className="input-group">
@@ -197,12 +182,6 @@ export default function EditarProdutoPage() {
                 <div className="input-group" style={{ gridColumn: "1/-1" }}>
                   <label className="input-label">Descrição catálogo</label>
                   <textarea className="input-field" value={form.descricao_marketing ?? ""} onChange={e => upd("descricao_marketing", e.target.value)} />
-                </div>
-                <div className="input-group" style={{ gridColumn: "1/-1" }}>
-                  <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", fontSize: "0.875rem" }}>
-                    <input type="checkbox" checked={form.precisa_revisao ?? false} onChange={e => upd("precisa_revisao", e.target.checked)} />
-                    Marcar para revisão
-                  </label>
                 </div>
               </div>
 

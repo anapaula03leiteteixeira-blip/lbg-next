@@ -10,7 +10,7 @@ export async function GET() {
 
     while (true) {
       const { data, error } = await sb
-        .from('produtos')
+        .from('produto_imagens')
         .select('hash_sha256, arquivo_original')
         .range(offset, offset + batch - 1);
 

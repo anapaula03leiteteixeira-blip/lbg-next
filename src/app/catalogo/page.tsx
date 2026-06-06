@@ -2,7 +2,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
-import type { Produto, Categoria, Qualidade } from "@/types";
+import type { Produto, ProdutoImagem, Categoria, Qualidade } from "@/types";
 import { Search, SlidersHorizontal, X, ChevronDown, ChevronLeft, ChevronRight, AlertTriangle, Download } from "lucide-react";
 
 const CATEGORIAS: Categoria[] = ["cuba","sanitario","pastilha","flexivel","rejunte","acessorio","outro"];
@@ -62,9 +62,9 @@ function ProductModal({
   onClose,
   onRevisar,
 }: {
-  allPhotos: Produto[];
+  allPhotos: ProdutoImagem[];
   onClose:   () => void;
-  onRevisar: (foto: Produto) => void;
+  onRevisar: (foto: ProdutoImagem) => void;
 }) {
   const [idx,         setIdx]         = useState(0);
   const [downloading, setDownloading] = useState(false);
@@ -75,7 +75,7 @@ function ProductModal({
     (QUAL_ORDER[a.qualidade_foto ?? "ruim"] ?? 9) - (QUAL_ORDER[b.qualidade_foto ?? "ruim"] ?? 9)
   );
 
-  async function downloadFoto(foto: Produto) {
+  async function downloadFoto(foto: ProdutoImagem) {
     if (!foto.image_url) return;
     setDownloading(true);
     try {
@@ -356,6 +356,7 @@ export default function CatalogoPage() {
       .catch(() => setLoading(false));
   }, []);
 
+  // Produtos já são 1 por SKU — filtrar diretamente
   const filtered = produtos.filter(p => {
     if (search) {
       const s = search.toLowerCase();
@@ -368,23 +369,18 @@ export default function CatalogoPage() {
     return true;
   });
 
-  // Melhor foto por SKU para o card
-  const QUAL_ORDER: Record<string, number> = { excelente:0, boa:1, regular:2, ruim:3 };
-  const bySkuMap = new Map<string, Produto>();
-  for (const p of filtered) {
-    const curr = bySkuMap.get(p.sku);
-    if (!curr || (QUAL_ORDER[p.qualidade_foto ?? "ruim"] ?? 9) < (QUAL_ORDER[curr.qualidade_foto ?? "ruim"] ?? 9)) {
-      bySkuMap.set(p.sku, p);
-    }
-  }
-  const unique = Array.from(bySkuMap.values());
+  // 1 produto por SKU (já garantido pela API)
+  const unique = filtered;
 
-  // Todas as fotos do SKU selecionado (busca em TODOS os produtos, não só filtrados)
-  const modalPhotos = selectedSku
-    ? produtos.filter(p => p.sku === selectedSku)
-    : [];
+  // Imagens do SKU selecionado para o modal
+  const selectedProduto = selectedSku ? produtos.find(p => p.sku === selectedSku) : null;
+  const modalPhotos: ProdutoImagem[] = selectedProduto?.imagens ?? [];
 
-  const n_revisao = produtos.filter(p => p.precisa_revisao).length;
+  // Contagem de fotos pendentes de revisão
+  const n_revisao = produtos.reduce(
+    (n, p) => n + (p.imagens?.filter(i => i.precisa_revisao).length ?? (p.precisa_revisao ? 1 : 0)),
+    0,
+  );
 
   function toggleCat(c: Categoria)  { setCatSel(prev  => prev.includes(c)  ? prev.filter(x => x !== c)  : [...prev, c]);  }
   function toggleQual(q: Qualidade) { setQualSel(prev  => prev.includes(q)  ? prev.filter(x => x !== q)  : [...prev, q]);  }
@@ -414,7 +410,7 @@ export default function CatalogoPage() {
         <div className="metrics-grid">
           {[
             ["Produtos",   unique.length],
-            ["Fotos",      filtered.length],
+            ["Fotos",      filtered.reduce((n, p) => n + (p.imagens?.length ?? 1), 0)],
             ["Categorias", new Set(filtered.map(p => p.categoria)).size],
             ["Revisão",    n_revisao],
           ].map(([label, val]) => (
@@ -504,11 +500,11 @@ export default function CatalogoPage() {
           <div className="product-grid">
             {unique.map(p => {
               const src = imgUrl(p.image_url, 400);
-              const nFotos = produtos.filter(x => x.sku === p.sku).length;
-              const temRevisao = produtos.some(x => x.sku === p.sku && x.precisa_revisao);
+              const nFotos = p.imagens?.length ?? 1;
+              const temRevisao = p.precisa_revisao ?? false;
               return (
                 <div
-                  key={p.id}
+                  key={p.sku}
                   className="product-card"
                   style={temRevisao ? { borderColor:"#fcd34d" } : {}}
                   onClick={() => setSelectedSku(p.sku)}
@@ -538,10 +534,10 @@ export default function CatalogoPage() {
               </thead>
               <tbody>
                 {unique.map(p => {
-                  const nFotos = produtos.filter(x => x.sku === p.sku).length;
-                  const temRevisao = produtos.some(x => x.sku === p.sku && x.precisa_revisao);
+                  const nFotos = p.imagens?.length ?? 1;
+                  const temRevisao = p.precisa_revisao ?? false;
                   return (
-                    <tr key={p.id} onClick={() => setSelectedSku(p.sku)} style={{ cursor:"pointer" }}>
+                    <tr key={p.sku} onClick={() => setSelectedSku(p.sku)} style={{ cursor:"pointer" }}>
                       <td><code style={{ fontSize:"0.8rem" }}>{p.sku}</code></td>
                       <td style={{ fontWeight:500 }}>{p.nome_produto}</td>
                       <td style={{ textTransform:"capitalize" }}>{p.categoria}</td>
@@ -562,7 +558,7 @@ export default function CatalogoPage() {
         <ProductModal
           allPhotos={modalPhotos}
           onClose={() => setSelectedSku(null)}
-          onRevisar={(foto) => {
+          onRevisar={(foto: ProdutoImagem) => {
             setSelectedSku(null);
             router.push(`/revisar?id=${foto.id}`);
           }}

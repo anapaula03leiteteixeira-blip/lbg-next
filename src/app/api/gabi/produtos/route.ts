@@ -7,13 +7,12 @@ const SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET ?? "change-m
 
 const CATEGORIAS: Categoria[] = ["cuba", "sanitario", "flexivel", "rejunte", "acessorio", "pastilha", "outro"];
 const QUALIDADES: Qualidade[] = ["excelente", "boa", "regular", "ruim"];
+const QUAL_ORDER: Record<string, number> = { excelente: 0, boa: 1, regular: 2, ruim: 3 };
 
 async function isAuthorized(req: NextRequest): Promise<boolean> {
-  // Aceita API key via header (para agentes de IA)
   const apiKey = req.headers.get("x-api-key");
   if (apiKey && apiKey === process.env.GABI_API_KEY) return true;
 
-  // Aceita JWT cookie (para usuários via browser)
   const token = req.cookies.get("lbg_token")?.value;
   if (!token) return false;
   try {
@@ -31,17 +30,15 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = req.nextUrl;
 
-    const categoriaParam    = searchParams.get("categoria");
-    const qualidadeParam    = searchParams.get("qualidade_foto");
-    const precisaRevisao    = searchParams.get("precisa_revisao");
-    const limitParam        = searchParams.get("limit");
-    const offsetParam       = searchParams.get("offset");
+    const categoriaParam = searchParams.get("categoria");
+    const qualidadeParam = searchParams.get("qualidade_foto");
+    const precisaRevisao = searchParams.get("precisa_revisao");
+    const limitParam     = searchParams.get("limit");
+    const offsetParam    = searchParams.get("offset");
 
-    // Validar e normalizar limit/offset
-    const limit  = Math.min(Math.max(parseInt(limitParam  ?? "50",  10) || 50,  1), 200);
+    const limit  = Math.min(Math.max(parseInt(limitParam  ?? "50", 10) || 50, 1), 200);
     const offset = Math.max(parseInt(offsetParam ?? "0", 10) || 0, 0);
 
-    // Validar enums se fornecidos
     if (categoriaParam && !CATEGORIAS.includes(categoriaParam as Categoria)) {
       return NextResponse.json(
         { error: `Categoria inválida: "${categoriaParam}". Use: ${CATEGORIAS.join(", ")}` },
@@ -56,24 +53,69 @@ export async function GET(req: NextRequest) {
     }
 
     const sb = supabaseServer();
-    let query = sb
+
+    // Buscar produtos master com filtro de categoria
+    let prodQuery = sb
       .from("produtos")
-      .select("sku,nome_produto,categoria,cor_dominante,qualidade_foto,image_url,descricao_marketing,tags")
+      .select("sku, nome_produto, categoria, cor_dominante, descricao_marketing, tags")
       .range(offset, offset + limit - 1)
       .order("criado_em", { ascending: false });
 
-    if (categoriaParam) query = query.eq("categoria", categoriaParam);
-    if (qualidadeParam) query = query.eq("qualidade_foto", qualidadeParam);
-    if (precisaRevisao !== null) query = query.eq("precisa_revisao", precisaRevisao === "true");
+    if (categoriaParam) prodQuery = prodQuery.eq("categoria", categoriaParam);
 
-    const { data, error } = await query;
-    if (error) throw error;
+    const { data: prods, error: prodErr } = await prodQuery;
+    if (prodErr) throw prodErr;
 
-    // Garantir que descricao_marketing nula seja retornada como null (não omitida)
-    const produtos: ProdutoGabi[] = (data ?? []).map(p => ({
-      ...p,
-      descricao_marketing: p.descricao_marketing ?? null,
-    }));
+    const skus = (prods ?? []).map(p => p.sku as string);
+    if (skus.length === 0) return NextResponse.json([]);
+
+    // Buscar melhor imagem por SKU
+    let imgQuery = sb
+      .from("produto_imagens")
+      .select("sku, image_url, qualidade_foto, precisa_revisao")
+      .in("sku", skus);
+
+    if (qualidadeParam) imgQuery = imgQuery.eq("qualidade_foto", qualidadeParam);
+    if (precisaRevisao !== null) imgQuery = imgQuery.eq("precisa_revisao", precisaRevisao === "true");
+
+    const { data: imgs, error: imgErr } = await imgQuery;
+    if (imgErr) throw imgErr;
+
+    // Agrupar imagens por SKU e escolher a melhor
+    const bestImgBySku = new Map<string, { image_url: string | null; qualidade_foto: string | null; precisa_revisao: boolean }>();
+    for (const img of imgs ?? []) {
+      const sku = img.sku as string;
+      const curr = bestImgBySku.get(sku);
+      if (
+        !curr ||
+        (QUAL_ORDER[img.qualidade_foto as string ?? "ruim"] ?? 9) <
+        (QUAL_ORDER[curr.qualidade_foto ?? "ruim"] ?? 9)
+      ) {
+        bestImgBySku.set(sku, {
+          image_url:       img.image_url as string | null,
+          qualidade_foto:  img.qualidade_foto as string | null,
+          precisa_revisao: (img.precisa_revisao as boolean) ?? false,
+        });
+      }
+    }
+
+    // Filtrar SKUs sem imagens (se filtros de qualidade/revisão foram aplicados)
+    const hasFotoFilter = qualidadeParam || precisaRevisao !== null;
+    const produtos: ProdutoGabi[] = (prods ?? [])
+      .filter(p => !hasFotoFilter || bestImgBySku.has(p.sku as string))
+      .map(p => {
+        const img = bestImgBySku.get(p.sku as string);
+        return {
+          sku:                 p.sku as string,
+          nome_produto:        p.nome_produto as string,
+          categoria:           p.categoria as Categoria,
+          cor_dominante:       p.cor_dominante as string | undefined,
+          qualidade_foto:      img?.qualidade_foto as Qualidade | undefined,
+          image_url:           img?.image_url ?? undefined,
+          descricao_marketing: (p.descricao_marketing as string | null) ?? null,
+          tags:                p.tags as string[] | undefined,
+        };
+      });
 
     return NextResponse.json(produtos);
   } catch (e: unknown) {

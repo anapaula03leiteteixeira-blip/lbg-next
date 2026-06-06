@@ -33,16 +33,18 @@ export default function RelatorioPage() {
     </AppLayout>
   );
 
-  const total     = produtos.length;
-  const skus      = new Set(produtos.map(p => p.sku)).size;
+  // Fotos = todas as imagens (sum de imagens[] por produto)
+  const todasImagens: import("@/types").ProdutoImagem[] = produtos.flatMap(p => p.imagens ?? []);
+  const total     = todasImagens.length;
+  const skus      = produtos.length;
   const revisao   = produtos.filter(p => p.precisa_revisao).length;
-  const excelente = produtos.filter(p => p.qualidade_foto === "excelente").length;
+  const excelente = todasImagens.filter(i => i.qualidade_foto === "excelente").length;
 
   // Contagens
   const byCat  = Object.entries(produtos.reduce((acc, p) => { acc[p.categoria] = (acc[p.categoria]??0)+1; return acc; }, {} as Record<string,number>)).sort((a,b)=>b[1]-a[1]);
-  const byQual = (["excelente","boa","regular","ruim"] as const).map(q => [q, produtos.filter(p=>p.qualidade_foto===q).length] as [string,number]).filter(([,v])=>v>0);
-  const byAng  = Object.entries(produtos.reduce((acc, p) => { if(p.angulo){acc[p.angulo]=(acc[p.angulo]??0)+1;} return acc; }, {} as Record<string,number>)).sort((a,b)=>b[1]-a[1]);
-  const topSku = Object.entries(produtos.reduce((acc, p) => { acc[p.sku]=(acc[p.sku]??0)+1; return acc; }, {} as Record<string,number>)).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  const byQual = (["excelente","boa","regular","ruim"] as const).map(q => [q, todasImagens.filter(i=>i.qualidade_foto===q).length] as [string,number]).filter(([,v])=>v>0);
+  const byAng  = Object.entries(todasImagens.reduce((acc, i) => { if(i.angulo){acc[i.angulo]=(acc[i.angulo]??0)+1;} return acc; }, {} as Record<string,number>)).sort((a,b)=>b[1]-a[1]);
+  const topSku = Object.entries(produtos.reduce((acc, p) => { acc[p.sku]=(p.imagens?.length??1); return acc; }, {} as Record<string,number>)).sort((a,b)=>b[1]-a[1]).slice(0,10);
 
   const maxCat  = Math.max(...byCat.map(([,v])=>v),  1);
   const maxQual = Math.max(...byQual.map(([,v])=>v), 1);
@@ -61,7 +63,7 @@ export default function RelatorioPage() {
 
         {/* Métricas */}
         <div className="metrics-grid">
-          {[["Total de fotos", total], ["SKUs únicos", skus], ["Qualidade excelente", excelente], ["Para revisão", revisao]].map(([l,v]) => (
+          {[["Total de fotos", total], ["Produtos (SKUs)", skus], ["Qualidade excelente", excelente], ["Para revisão", revisao]].map(([l,v]) => (
             <div className="metric-card" key={l as string}>
               <div className="metric-label">{l}</div>
               <div className="metric-value">{v}</div>
@@ -116,7 +118,7 @@ export default function RelatorioPage() {
               <thead><tr>{["SKU","Nome","Categoria","Qualidade"].map(h=><th key={h}>{h}</th>)}</tr></thead>
               <tbody>
                 {revisao_df.map(p => (
-                  <tr key={p.id}>
+                  <tr key={p.sku}>
                     <td><code style={{ fontSize: "0.8rem" }}>{p.sku}</code></td>
                     <td>{p.nome_produto}</td>
                     <td style={{ textTransform: "capitalize" }}>{p.categoria}</td>
