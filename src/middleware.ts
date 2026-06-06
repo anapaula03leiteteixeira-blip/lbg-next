@@ -2,7 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
 const SECRET       = new TextEncoder().encode(process.env.NEXTAUTH_SECRET ?? "change-me");
-const PUBLIC       = ["/login", "/api/auth/login"];
+const PUBLIC = [
+  "/login",
+  "/api/auth/login",
+  "/api/auth/reset-request",
+  "/api/auth/reset-confirm",
+  "/api/auth/magic-link",
+  "/reset-password",
+];
 const ADMIN_ONLY   = ["/admin", "/api/admin"];
 const EDITOR_ONLY  = ["/novo", "/editar", "/revisar", "/api/upload", "/api/produtos"];
 const AUTH_ONLY    = ["/api/gabi"];

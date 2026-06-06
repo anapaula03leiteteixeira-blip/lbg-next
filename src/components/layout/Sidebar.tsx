@@ -2,7 +2,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutGrid, Plus, PenLine, BarChart2, AlertTriangle, ShieldCheck, LogOut } from "lucide-react";
+import { LayoutGrid, Plus, PenLine, BarChart2, AlertTriangle, ShieldCheck, LogOut, KeyRound } from "lucide-react";
+import AlterarSenhaModal from "@/components/auth/AlterarSenhaModal";
 import type { Role } from "@/types";
 
 interface AuthUser { name: string; email: string; role: Role; }
@@ -22,6 +23,7 @@ const ROLE_COLOR: Record<Role, string> = { admin:"#fbbf24", editor:"#93c5fd", vi
 export default function Sidebar() {
   const path = usePathname();
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [showAlterarSenha, setShowAlterarSenha] = useState(false);
 
   useEffect(() => {
     fetch("/api/auth/me")
@@ -62,6 +64,15 @@ export default function Sidebar() {
             </span>
           </div>
         )}
+        <button
+          type="button"
+          className="nav-link btn-ghost"
+          onClick={() => setShowAlterarSenha(true)}
+          style={{ width:"100%", background:"none", border:"none", cursor:"pointer", color:"#57534e", fontSize:"0.8rem" }}
+        >
+          <KeyRound size={14} />
+          Alterar senha
+        </button>
         <form action="/api/auth/signout" method="POST">
           <button
             type="submit"
@@ -73,6 +84,8 @@ export default function Sidebar() {
           </button>
         </form>
       </div>
+
+      {showAlterarSenha && <AlterarSenhaModal onClose={() => setShowAlterarSenha(false)} />}
     </aside>
   );
 }

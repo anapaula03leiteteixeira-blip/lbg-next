@@ -10,6 +10,7 @@
 ## Visão Geral do Roadmap
 
 ```
+EPIC-0 (Fase 0 / v4.5)   → Auth & Segurança (paralelo a EPIC-1)
 EPIC-1 (Fase 1 / v4.5)   → API Gabi + Enriquecimento
    ↓
 EPIC-2 (Fase 2 / v4.5)   → Agenda de Conteúdo
@@ -25,6 +26,7 @@ EPIC-4 (Fase 4 / v5.0)   → Pipeline Canva + ZIP + WhatsApp
 
 | ID | Nome | Fase | Status | Stories | Arquivo |
 |----|------|------|--------|---------|---------|
+| EPIC-0 | Auth & Segurança: Reset e Magic Link | 0 / v4.5 | Draft | 3 | [epic-0-auth-seguranca.md](epics/epic-0-auth-seguranca.md) |
 | EPIC-1 | API Gabi: lbg-next como Fonte de Verdade | 1 / v4.5 | Draft | 3 | [epic-1-api-gabi.md](epics/epic-1-api-gabi.md) |
 | EPIC-2 | Agenda de Conteúdo | 2 / v4.5 | Draft | 3 | [epic-2-agenda-conteudo.md](epics/epic-2-agenda-conteudo.md) |
 | EPIC-3 | Integração Gabi ↔ lbg-next | 3 / v4.6 | Draft | 3 | [epic-3-integracao-gabi.md](epics/epic-3-integracao-gabi.md) |
@@ -34,10 +36,16 @@ EPIC-4 (Fase 4 / v5.0)   → Pipeline Canva + ZIP + WhatsApp
 
 ## Dependências
 
-- **EPIC-1** → independente (pré-requisito para todos)
+- **EPIC-0** → independente (pode rodar em paralelo com EPIC-1)
+- **EPIC-1** → independente (pré-requisito para EPIC-2, 3, 4)
 - **EPIC-2** → depende de EPIC-1 (Story 1.3: Gabi cadastrada)
 - **EPIC-3** → depende de EPIC-1 (Story 1.1: endpoints /api/gabi/*)
 - **EPIC-4** → depende de EPIC-2 e EPIC-3
+
+### Dependências internas — EPIC-0
+- Story 0.1 → independente
+- Story 0.2 → instala Resend + cria `auth_tokens`
+- Story 0.3 → depende de Story 0.2 (reutiliza Resend + tabela)
 
 ---
 
@@ -73,4 +81,11 @@ Story 1.4 (Copies SEO — texto-only, ~6× mais barato que Vision)
 Pasta: `docs/stories/active/`  
 Padrão de nome: `{epicNum}.{storyNum}.story.md`
 
-*Nenhuma story ativa no momento — aguardando @sm criar a partir dos épicos.*
+| Story | Arquivo | Status |
+|---|---|---|
+| 0.1 Troca de senha | [0.1.troca-de-senha.story.md](active/0.1.troca-de-senha.story.md) | Ready |
+| 0.2 Reset de senha via email | [0.2.reset-senha-email.story.md](active/0.2.reset-senha-email.story.md) | Ready |
+| 0.3 Magic link | [0.3.magic-link.story.md](active/0.3.magic-link.story.md) | Ready |
+| 1.1 API Gabi endpoints | [1.1.api-gabi-endpoints.story.md](active/1.1.api-gabi-endpoints.story.md) | Ready for Review |
+| 1.2 Enriquecimento marketing | [1.2.enriquecimento-descricao-marketing.story.md](active/1.2.enriquecimento-descricao-marketing.story.md) | Ready |
+| 1.4 Copies SEO | [1.4.copies-seo-plataformas.story.md](active/1.4.copies-seo-plataformas.story.md) | Ready |
