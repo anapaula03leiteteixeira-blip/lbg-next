@@ -89,22 +89,24 @@ O catálogo centraliza foto, dados técnicos e copies — eliminando retrabalho 
 
 ---
 
-### Story 1.3 — Gestão de Usuários: Gabi e Funcionários
+### Story 1.3 — Gestão de Acesso Humano ✅ Done
 
 **Tipo:** Operação (Imediato — sem código)  
-**Executor:** `@dev` (instrução para Ana Paula executar)  
-**Quality Gate:** `@dev`  
+**Executor:** Ana Paula (manual)  
+**Quality Gate:** —  
 **Esforço:** Mínimo (15 min)  
+**Status:** Done (2026-06-05)
 
-**Descrição:** Cadastrar Gabi (editor) e funcionários relevantes via `/admin`, e trocar a senha padrão do admin.
+**Descrição:** Trocar a senha padrão do admin e cadastrar funcionários humanos relevantes via `/admin`.
+
+> **Nota sobre Gabi:** Gabi é um agente de IA e **não precisa de registro em `usuarios`**. Ela autentica via `X-API-Key` (header `GABI_API_KEY`) — sem usuário, sem senha, sem entrada no banco. A redação original ("cadastrar Gabi com role editor") estava incorreta.
 
 **Acceptance Criteria:**
-- [ ] Senha de `anapaula03.leiteteixeira@gmail.com` trocada (não mais `LBG@2026`)
-- [ ] Gabi cadastrada com role `editor`
-- [ ] Demais funcionários cadastrados com role `viewer` ou `editor` conforme necessário
-- [ ] Todos os novos usuários conseguem fazer login com sucesso
+- [x] Senha de `anapaula03.leiteteixeira@gmail.com` trocada (não mais `LBG@2026`)
+- [x] Funcionários humanos cadastrados com role `viewer` ou `editor` conforme necessário
+- [x] Todos os novos usuários conseguem fazer login com sucesso
 
-**Nota:** Esta story é executada manualmente por Ana Paula em https://lbg-next.vercel.app/admin
+**Concluído em:** 2026-06-05 por Ana Paula em https://lbg-next.vercel.app/admin
 
 ---
 
