@@ -71,6 +71,38 @@ export interface FiltrosProduto {
   revisao?:    boolean;
 }
 
+// ── Copies SEO ────────────────────────────────────────────────────────────────
+export type Plataforma = "amazon" | "mercado_livre" | "shopee" | "leroy_merlin" | "madeira_madeira";
+
+export interface ProdutoCopy {
+  id:             number;
+  sku:            string;
+  plataforma:     Plataforma;
+  titulo:         string;
+  bullets:        string[] | null;
+  descricao:      string;
+  palavras_chave: string[] | null;
+  gerado_em:      string;
+  atualizado_em:  string;
+}
+
+export const COPY_LIMITS: Record<Plataforma, { titulo: number; bullets?: { count: number; chars: number }; descricao: number }> = {
+  amazon:          { titulo: 200, bullets: { count: 5,  chars: 255 }, descricao: 2000 },
+  mercado_livre:   { titulo: 60,                                       descricao: 4000 },
+  shopee:          { titulo: 120,                                      descricao: 3000 },
+  leroy_merlin:    { titulo: 100, bullets: { count: 10, chars: 200 }, descricao: 1000 },
+  madeira_madeira: { titulo: 150,                                      descricao: 2000 },
+};
+
+export const PLATAFORMA_LABEL: Record<Plataforma, string> = {
+  amazon:          "Amazon",
+  mercado_livre:   "Mercado Livre",
+  shopee:          "Shopee",
+  leroy_merlin:    "Leroy Merlin",
+  madeira_madeira: "MadeiraMadeira",
+};
+
+// ── Classificação IA ──────────────────────────────────────────────────────────
 export interface ClassificacaoIA {
   sku?:                string;
   nome_produto?:       string;

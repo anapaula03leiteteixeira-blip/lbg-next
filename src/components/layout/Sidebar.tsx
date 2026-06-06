@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutGrid, Plus, PenLine, BarChart2, AlertTriangle, ShieldCheck, LogOut, KeyRound } from "lucide-react";
+import { LayoutGrid, Plus, PenLine, BarChart2, AlertTriangle, ShieldCheck, LogOut, KeyRound, FileText } from "lucide-react";
 import AlterarSenhaModal from "@/components/auth/AlterarSenhaModal";
 import type { Role } from "@/types";
 
@@ -14,7 +14,8 @@ const ALL_LINKS = [
   { href: "/editar",    label: "Editar Produto", icon: PenLine,       roles: ["admin","editor"]           as Role[] },
   { href: "/revisar",   label: "Revisão",        icon: AlertTriangle, roles: ["admin","editor"]           as Role[] },
   { href: "/relatorio", label: "Relatório",      icon: BarChart2,     roles: ["admin","editor","viewer"]  as Role[] },
-  { href: "/admin",     label: "Usuários",       icon: ShieldCheck,   roles: ["admin"]                    as Role[] },
+  { href: "/admin",        label: "Usuários",    icon: ShieldCheck, roles: ["admin"]                    as Role[] },
+  { href: "/admin/copies", label: "Copies SEO",  icon: FileText,    roles: ["admin"]                    as Role[] },
 ];
 
 const ROLE_LABEL: Record<Role, string> = { admin:"Admin", editor:"Editor", viewer:"Visualizador" };

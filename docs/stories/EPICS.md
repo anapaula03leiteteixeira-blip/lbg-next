@@ -28,7 +28,7 @@ EPIC-4 (Fase 4 / v5.0)   → Pipeline Canva + ZIP + WhatsApp
 | ID | Nome | Fase | Status | Stories | Arquivo |
 |----|------|------|--------|---------|---------|
 | EPIC-0 | Auth & Segurança: Reset e Magic Link | 0 / v4.5 | **Done** | 3/3 | [epic-0-auth-seguranca.md](epics/epic-0-auth-seguranca.md) |
-| EPIC-1 | API Gabi: lbg-next como Fonte de Verdade | 1 / v4.5 | **In Progress** | 3/4 | [epic-1-api-gabi.md](epics/epic-1-api-gabi.md) |
+| EPIC-1 | API Gabi: lbg-next como Fonte de Verdade | 1 / v4.5 | **Done** | 4/4 | [epic-1-api-gabi.md](epics/epic-1-api-gabi.md) |
 | EPIC-2 | Agenda de Conteúdo | 2 / v4.5 | Draft | 3 | [epic-2-agenda-conteudo.md](epics/epic-2-agenda-conteudo.md) |
 | EPIC-3 | Integração Gabi ↔ lbg-next | 3 / v4.6 | Draft | 3 | [epic-3-integracao-gabi.md](epics/epic-3-integracao-gabi.md) |
 | EPIC-4 | Pipeline Canva Automatizado | 4 / v5.0 | Draft | 4 | [epic-4-pipeline-canva.md](epics/epic-4-pipeline-canva.md) |
