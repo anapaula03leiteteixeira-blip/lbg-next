@@ -133,6 +133,61 @@ export default function LoginContent() {
           </button>
         </form>
 
+        {/* ── Magic link — botão roxo logo abaixo do Entrar ────────── */}
+        <div style={{ marginTop:"0.75rem" }}>
+          {!showMagic ? (
+            <button
+              type="button"
+              onClick={() => setShowMagic(true)}
+              style={{
+                width:"100%",
+                padding:"0.65rem 1rem",
+                background:"#7c3aed",
+                color:"#fff",
+                border:"none",
+                borderRadius:"0.5rem",
+                fontSize:"0.95rem",
+                fontWeight:600,
+                cursor:"pointer",
+                display:"flex",
+                alignItems:"center",
+                justifyContent:"center",
+                gap:"0.4rem",
+                transition:"background 0.15s",
+              }}
+              onMouseOver={e => (e.currentTarget.style.background = "#6d28d9")}
+              onMouseOut={e  => (e.currentTarget.style.background = "#7c3aed")}
+            >
+              🪄 Entrar com MagicLink
+            </button>
+          ) : magicMsg ? (
+            <p style={{ fontSize:"0.85rem", color:"#86efac", margin:0, textAlign:"center" }}>{magicMsg}</p>
+          ) : (
+            <form onSubmit={handleMagic} style={{ display:"flex", flexDirection:"column", gap:"0.75rem" }}>
+              <p style={{ fontSize:"0.85rem", color:"#9ca3af", margin:0 }}>Enviaremos um link de acesso para seu e-mail.</p>
+              <input
+                type="email"
+                className="input-field"
+                placeholder="seu@email.com"
+                value={magicEmail}
+                onChange={e => setMagicEmail(e.target.value)}
+                required
+                autoFocus
+              />
+              <div style={{ display:"flex", gap:"0.5rem" }}>
+                <button type="button" className="btn btn-secondary" onClick={() => setShowMagic(false)}>Cancelar</button>
+                <button
+                  type="submit"
+                  disabled={magicLoading}
+                  style={{ flex:1, padding:"0.6rem 1rem", background:"#7c3aed", color:"#fff", border:"none", borderRadius:"0.5rem", fontWeight:600, cursor:"pointer" }}
+                >
+                  {magicLoading ? "Enviando..." : "🪄 Enviar link"}
+                </button>
+              </div>
+            </form>
+          )}
+        </div>
+
         {/* ── Esqueci minha senha ──────────────────────────────────── */}
         <div style={{ marginTop:"1rem", borderTop:"1px solid rgba(255,255,255,0.08)", paddingTop:"1rem" }}>
           {!showReset ? (
@@ -160,39 +215,6 @@ export default function LoginContent() {
                 <button type="button" className="btn btn-secondary" onClick={() => setShowReset(false)}>Cancelar</button>
                 <button type="submit" className="btn btn-primary" disabled={resetLoading}>
                   {resetLoading ? "Enviando..." : "Enviar link"}
-                </button>
-              </div>
-            </form>
-          )}
-        </div>
-
-        {/* ── Entrar sem senha (magic link) ────────────────────────── */}
-        <div style={{ marginTop:"0.75rem", borderTop:"1px solid rgba(255,255,255,0.08)", paddingTop:"0.75rem" }}>
-          {!showMagic ? (
-            <button
-              type="button"
-              onClick={() => setShowMagic(true)}
-              style={{ background:"none", border:"none", color:"#67e8f9", cursor:"pointer", fontSize:"0.85rem", textDecoration:"underline" }}
-            >
-              Entrar sem senha
-            </button>
-          ) : magicMsg ? (
-            <p style={{ fontSize:"0.85rem", color:"#86efac", margin:0 }}>{magicMsg}</p>
-          ) : (
-            <form onSubmit={handleMagic} style={{ display:"flex", flexDirection:"column", gap:"0.75rem" }}>
-              <p style={{ fontSize:"0.85rem", color:"#9ca3af", margin:0 }}>Enviaremos um link de acesso para seu e-mail.</p>
-              <input
-                type="email"
-                className="input-field"
-                placeholder="seu@email.com"
-                value={magicEmail}
-                onChange={e => setMagicEmail(e.target.value)}
-                required
-              />
-              <div style={{ display:"flex", gap:"0.5rem" }}>
-                <button type="button" className="btn btn-secondary" onClick={() => setShowMagic(false)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary" disabled={magicLoading}>
-                  {magicLoading ? "Enviando..." : "Enviar link mágico"}
                 </button>
               </div>
             </form>
