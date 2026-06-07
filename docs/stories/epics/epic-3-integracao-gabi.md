@@ -1,18 +1,18 @@
 # Epic 3 — Integração Gabi ↔ lbg-next
 
 **ID:** EPIC-3  
-**Fase:** 3 (v4.6)  
+**Fase:** 2 (v4.5) — promovido de Fase 3  
 **Status:** Draft  
 **Owner:** Morgan (PM)  
-**Data:** 2026-06-05  
-**PRD Ref:** PRD-lbg-catalogo.md §13 Fase 3  
-**Depende de:** EPIC-1 (Story 1.1 — endpoints /api/gabi/*), EPIC-2 (Story 2.3 — /api/gabi/agenda)
+**Data:** 2026-06-06 (revisado)  
+**PRD Ref:** PRD-lbg-catalogo.md §13 Fase 2  
+**Depende de:** EPIC-1 (endpoints /api/gabi/* já disponíveis — sem outras dependências)
 
 ---
 
 ## Epic Goal
 
-Conectar o agente Gabi (social media La Bella Griffe) diretamente ao lbg-next como fonte primária de dados de produtos e agenda, substituindo PDFs do Google Drive e imagens locais por consultas dinâmicas à API.
+Conectar o agente Gabi (social media La Bella Griffe) diretamente ao lbg-next como **fonte primária de dados de produtos e imagens**, substituindo PDFs do Google Drive por consultas dinâmicas à API. Gabi gerencia o calendário e a execução no próprio lado — lbg-next fornece os dados.
 
 ---
 
@@ -49,27 +49,6 @@ Conectar o agente Gabi (social media La Bella Griffe) diretamente ao lbg-next co
 
 ---
 
-### Story 3.2 — Comando *agenda-hoje no Agente Gabi
-
-**Tipo:** Feature (CLI)  
-**Executor:** `@dev`  
-**Quality Gate:** `@architect`  
-**Esforço:** Pequeno (2–4h)  
-
-**Descrição:** Comando `*agenda-hoje` e `*agenda-semana` que consulta `/api/gabi/agenda` e exibe o planejamento de conteúdo formatado para ação imediata.
-
-**Acceptance Criteria:**
-- [ ] `*agenda-hoje` retorna posts do dia atual formatados: plataforma, tipo_post, produto (SKU + nome + imagem), legenda sugerida, status
-- [ ] `*agenda-semana` retorna posts da semana atual agrupados por dia
-- [ ] Posts com status `planejado` mostrados com ícone de ação pendente
-- [ ] Posts com status `criado` ou `publicado` mostrados como concluídos
-- [ ] Sem posts no dia → mensagem "Nenhum post planejado para hoje"
-- [ ] Output formatado em Markdown para fácil leitura no terminal/chat
-
-**Quality Gate Tools:** `[api_contract_validation, date_handling]`
-
----
-
 ### Story 3.3 — Substituição de PDFs por image_url Cloudinary
 
 **Tipo:** Feature (CLI + Config)  
@@ -94,7 +73,7 @@ Conectar o agente Gabi (social media La Bella Griffe) diretamente ao lbg-next co
 
 - [ ] Gabi v6 existente continua funcionando (novos comandos são aditivos)
 - [ ] Scripts `upload-drive.js` e `gerar-legenda-docx.js` não são alterados
-- [ ] lbg-next não requer mudanças (usa apenas endpoints já criados no Épico 1 e 2)
+- [ ] lbg-next não requer mudanças (usa apenas endpoints já criados no EPIC-1)
 
 ## Risk Mitigation
 
@@ -104,11 +83,11 @@ Conectar o agente Gabi (social media La Bella Griffe) diretamente ao lbg-next co
 
 ## Definition of Done
 
-- [ ] Gabi consegue `*buscar-produto {SKU}` e obter dados completos
-- [ ] Gabi consegue `*agenda-hoje` e ver planejamento
-- [ ] Gabi usa Cloudinary como fonte de imagens para novos posts
-- [ ] PRD atualizado para v4.6
+- [ ] Gabi consegue `*buscar-produto {SKU}` e obter dados completos (nome, cor, qualidade, image_url, descricao_marketing, tags)
+- [ ] Gabi usa `image_url` Cloudinary como fonte primária de imagens para novos posts
+- [ ] Gabi consegue `*fotos {SKU}` para ver todas as fotos do produto com ângulo e qualidade
+- [ ] PRD atualizado para v4.5
 
 ---
 
-*Handoff para @sm: Criar stories 3.1, 3.2 e 3.3. Sequência: 3.1 → 3.2 → 3.3. Requer EPIC-1 Story 1.1 concluída.*
+*Handoff para @sm: Criar stories 3.1 e 3.3. Sequência: 3.1 → 3.3. EPIC-1 já concluído — endpoints disponíveis.*

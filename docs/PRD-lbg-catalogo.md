@@ -1,7 +1,7 @@
 # PRD — La Bella Griffe: Sistema de Catálogo de Produtos
 
-**Versão:** 4.4
-**Data:** 2026-06-05
+**Versão:** 4.5
+**Data:** 2026-06-06
 **Status:** Em produção
 **Owner:** Ana Paula Teixeira (anapaula03.leiteteixeira@gmail.com)
 **URL:** https://lbg-next.vercel.app
@@ -27,7 +27,8 @@ Usuários autenticados por email + senha com três perfis de acesso (admin, edit
 | v4.1 — Next.js | Download de fotos no carrossel | Substituído | 2026-06-04 |
 | v4.2 — Next.js | Upload em lote ZIP + dedup + catálogo LBG + melhorias catálogo | Substituído | 2026-06-05 |
 | v4.3 — Next.js | Correções UI: pastilha em todos os dropdowns, botão lote destacado, modal What's New, brand redesign (Playfair Display + paleta La Bella) | Substituído | 2026-06-05 |
-| **v4.4 — Next.js** | **Sprint QA completo (H1–M5 + L1–L3): 10 bugs corrigidos no pipeline de upload. Multi-foto queue em Novo Produto. Instruções de uso em lote e individual. Correção CSS keyframes fadeUp.** | **Em produção** | 2026-06-05 |
+| v4.4 — Next.js | Sprint QA completo (H1–M5 + L1–L3): 10 bugs corrigidos no pipeline de upload. Multi-foto queue em Novo Produto. Instruções de uso em lote e individual. Correção CSS keyframes fadeUp. | Substituído | 2026-06-05 |
+| **v4.5 — Next.js** | **EPIC-1 completo: API Gabi (endpoints /api/gabi/*), enriquecimento descricao_marketing, copies SEO 5 plataformas, refactor modelo produto-cêntrico (produtos + produto_imagens), material "vidro" adicionado.** | **Em produção** | 2026-06-06 |
 
 ---
 
@@ -224,9 +225,13 @@ src/
 │   │   ├── auth/signout/       → POST: remove cookie JWT
 │   │   ├── admin/usuarios/     → GET: lista | POST: cria usuário
 │   │   ├── admin/usuarios/[id] → PATCH: edita | DELETE: exclui
-│   │   ├── produtos/           → GET: lista | POST: cria produto
-│   │   ├── produtos/[id]/      → PATCH: edita | DELETE: exclui
-│   │   └── upload/             → POST: Cloudinary + Claude Vision
+│   │   ├── produtos/           → GET: lista com imagens[] | POST: cria produto master
+│   │   ├── produtos/[sku]/     → PATCH: edita master+foto | DELETE: cascata todas as fotos
+│   │   ├── produto-imagens/    → GET: lista fotos com join produtos
+│   │   ├── gabi/produtos/      → GET: lista otimizada para agente Gabi
+│   │   ├── gabi/produto/[sku]/ → GET: detalhe completo por SKU
+│   │   ├── copies/             → GET: lista copies | PATCH: edita copy
+│   │   └── upload/             → POST: Cloudinary + Claude Vision → produto_imagens
 │   ├── admin/                  → gestão de usuários (admin only)
 │   ├── catalogo/               → galeria com modal multi-foto
 │   ├── editar/                 → edição de produto
@@ -251,26 +256,44 @@ src/
 
 ## 7. Banco de Dados (Supabase)
 
-### Tabela `produtos`
+> **Modelo produto-cêntrico** (Story 1.5, v4.5): dois níveis — `produtos` (1 row/SKU) e `produto_imagens` (N fotos/SKU). Anterior: 1 row/foto em `produtos` (legado em `produtos_legacy`).
+
+### Tabela `produtos` (master — 1 row/SKU)
 
 | Campo | Tipo | Descrição |
 |-------|------|-----------|
-| id | BIGSERIAL PK | ID auto-incremento |
-| sku | TEXT NOT NULL | Código do produto |
+| sku | TEXT PK | Código do produto (chave primária) |
 | nome_produto | TEXT NOT NULL | Nome comercial |
 | categoria | TEXT | cuba/sanitario/pastilha/flexivel/rejunte/acessorio/outro |
 | subcategoria | TEXT | Detalhe da categoria |
 | cor_dominante | TEXT | Cor principal |
+| material_aparente | TEXT | louca/aco_inox/plastico/ceramica/metal/borracha/**vidro**/outro |
+| tags | TEXT[] | Palavras-chave para busca |
+| descricao_marketing | TEXT | Frase para catálogo |
+| descricao_tecnica | TEXT | Especificações técnicas |
+| criado_em | TIMESTAMPTZ | Data de inserção no banco |
+| atualizado_em | TIMESTAMPTZ | Última atualização |
+| — | — | **Campos derivados** (retornados pela API via join com melhor foto) |
+| image_url | TEXT (derivado) | URL da foto com melhor qualidade |
+| qualidade_foto | TEXT (derivado) | Qualidade da melhor foto |
+| precisa_revisao | BOOLEAN (derivado) | `true` se qualquer foto precisa revisão |
+
+**Critério de "melhor foto":** `QUAL_ORDER = {excelente:0, boa:1, regular:2, ruim:3}` — foto com menor score é a principal.
+
+### Tabela `produto_imagens` (fotos — N rows/SKU)
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | BIGSERIAL PK | ID auto-incremento |
+| sku | TEXT NOT NULL → FK `produtos.sku` ON DELETE CASCADE | Produto ao qual a foto pertence |
+| image_url | TEXT | URL Cloudinary ou GitHub raw |
 | angulo | TEXT | frontal/lateral/superior/perspectiva/detalhe/conjunto/embalagem |
 | fundo | TEXT | branco/colorido/ambiente/transparente/outro |
 | qualidade_foto | TEXT | excelente/boa/regular/ruim |
-| material_aparente | TEXT | louca/aco_inox/plastico/ceramica/metal/borracha/outro |
-| tags | TEXT[] | Palavras-chave para busca |
+| cor_dominante | TEXT | Cor principal (pode diferir entre fotos) |
+| material_aparente | TEXT | louca/aco_inox/plastico/ceramica/metal/borracha/**vidro**/outro |
 | problemas_foto | TEXT[] | Defeitos detectados pela IA |
-| descricao_marketing | TEXT | Frase para catálogo |
-| descricao_tecnica | TEXT | Especificações técnicas |
 | precisa_revisao | BOOLEAN | Flag de revisão pendente |
-| image_url | TEXT | URL Cloudinary ou GitHub raw |
 | hash_sha256 | TEXT | Hash SHA-256 do arquivo |
 | arquivo_original | TEXT | Nome original do arquivo |
 | processado_em | TIMESTAMPTZ | Data de processamento pela IA |
@@ -387,16 +410,15 @@ Conclusão com sumário (salvos/pulados/erros) + log expandível de erros
 
 ## 10. Catálogo Inicial
 
-Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision):
+Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision). Migrado para modelo produto-cêntrico em 06/06/2026 (Story 1.5):
 
 | Métrica | Valor |
 |---------|-------|
-| Total de fotos | 435 |
-| SKUs únicos | ~85 |
-| Com imagem | 435/435 (100%) |
-| Para revisão | 18 |
-| Imagens hospedadas | GitHub raw (13.4 MB) |
-| Banco | Supabase (`produtos`) |
+| Total de fotos | ~896 (em `produto_imagens`) |
+| SKUs únicos | ~426 (em `produtos`) |
+| Para revisão | varia — flag por foto em `produto_imagens` |
+| Imagens hospedadas | GitHub raw (catálogo original) + Cloudinary (novas) |
+| Banco | Supabase (`produtos` + `produto_imagens`) |
 
 ---
 
@@ -453,6 +475,8 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision):
 | Cloudinary config em módulo compartilhado | Cada route.ts é um lambda separado no Vercel — config em `lib/cloudinary.ts` garante disponibilidade |
 | Cloudinary signed URLs com `expires_at` | CDN rejeita URL após timestamp — controle de acesso real sem migrar para `type:authenticated` |
 | `throw` fora de handlers → validação dentro do handler | `throw` em nível de módulo quebra cold start de qualquer rota que importe o módulo |
+| Agenda de conteúdo fora do lbg-next | Gabi gerencia o calendário no próprio agente — lbg-next é fonte de dados, não de gestão de agenda |
+| Ubersuggest MCP para enriquecimento (em vez de Claude Vision em lote) | Keywords com volume de busca real do site La Bella > descrições genéricas geradas por imagem |
 
 ---
 
@@ -471,41 +495,44 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision):
 | Média | Painéis de instruções colapsáveis em `/novo` e `/novo/bulk` | Pequeno | **Concluído v4.4** |
 | Alta | Hotfix: `@keyframes fadeUp` faltante — catálogo em grade vazio | Mínimo | **Concluído v4.4** |
 
-### Fase 1 — lbg-next como Fonte de Verdade para Gabi (v4.4)
+### Fase 1 — lbg-next como Fonte de Verdade para Gabi (v4.5) ✅ Done
 
 | Prioridade | Feature | Esforço | Status |
 |-----------|---------|---------|--------|
-| Alta | Endpoint `/api/gabi/produtos` com filtros otimizados para Gabi | Pequeno | Pendente |
-| Alta | Endpoint `/api/gabi/produto/[sku]` — detalhe completo por SKU | Pequeno | Pendente |
-| Média | Enriquecer `descricao_marketing` dos 435 produtos (Claude Vision em lote) | Médio | Pendente |
-| Média | Adicionar Gabi e funcionários via `/admin` | Imediato | Pendente |
-| Alta | Trocar senha padrão `LBG@2026` | Imediato | Pendente |
+| Alta | Endpoint `/api/gabi/produtos` com filtros otimizados para Gabi | Pequeno | **Concluído v4.5** |
+| Alta | Endpoint `/api/gabi/produto/[sku]` — detalhe completo por SKU | Pequeno | **Concluído v4.5** |
+| Média | Enriquecer `descricao_marketing` dos produtos (Claude Vision em lote) | Médio | **Concluído v4.5** (script pronto, execução pendente) |
+| Alta | Copies SEO 5 plataformas (`produto_copies` + admin UI + endpoints) | Grande | **Concluído v4.5** (script pronto, execução pendente) |
+| Média | Gestão de acesso humano via `/admin` | Imediato | **Concluído v4.5** |
+| Alta | Refactor modelo produto-cêntrico (`produtos` + `produto_imagens`) | Grande | **Concluído v4.5** |
+| Alta | Material "vidro" + migration pastilhas | Pequeno | **Concluído v4.5** |
 
-### Fase 2 — Agenda de Conteúdo (v4.5)
+### Fase 2 — Agenda de Conteúdo → DESCARTADA (06/06/2026)
 
-| Prioridade | Feature | Esforço | Status |
-|-----------|---------|---------|--------|
-| Alta | Tabela `agenda_conteudo` no Supabase | Pequeno | Pendente |
-| Alta | Página `/agenda` — planejamento semanal/mensal | Médio | Pendente |
-| Alta | Endpoint `/api/agenda` para consulta da Gabi | Pequeno | Pendente |
+> Decisão: Gabi gerencia o calendário de postagens no próprio agente. lbg-next é **fonte de dados**, não de gestão de agenda. Construir tabela e UI de agenda aqui seria duplicação de responsabilidade.
 
-### Fase 3 — Integração Gabi ↔ lbg-next (v4.6)
+### Fase 2 (rev) — Integração Gabi ↔ lbg-next (EPIC-3 / v4.5)
 
 | Prioridade | Feature | Esforço | Status |
 |-----------|---------|---------|--------|
-| Alta | Gabi lê produtos de lbg-next (substitui PDFs do Drive) | Médio | Pendente |
-| Alta | Gabi usa `image_url` Cloudinary como fonte primária de imagem | Pequeno | Pendente |
-| Média | `*criar-post {SKU}` busca dados automáticos de lbg-next | Médio | Pendente |
+| Alta | `*buscar-produto {SKU}` no agente Gabi → dados completos do produto | Médio | Pendente |
+| Alta | `*fotos {SKU}` → Cloudinary como fonte primária de imagens para artes | Pequeno | Pendente |
 
-### Fase 4 — Pipeline Canva Automatizado (v5.0)
+### Fase 3 — Enriquecimento com Ubersuggest (EPIC-5 / v4.5)
 
 | Prioridade | Feature | Esforço | Status |
 |-----------|---------|---------|--------|
-| Alta | Gabi marca agenda como "criado" após arte gerada | Pequeno | Pendente |
-| Média | Página `/agenda` exibe status das artes criadas | Médio | Pendente |
-| Baixa | Download ZIP de seleção de fotos | Médio | Pendente |
-| Baixa | Notificação WhatsApp ao cadastrar produto | Médio | Pendente |
+| Alta | Configurar MCP Ubersuggest (monitora site La Bella) | Imediato | Pendente |
+| Alta | Mapear keywords reais por categoria → `keyword-map.json` | Pequeno | Pendente |
+| Alta | Enriquecer `descricao_marketing` com keywords Ubersuggest + Claude | Médio | Pendente |
+| Alta | Gerar copies SEO por plataforma com keywords reais | Médio | Pendente |
+
+### Fase 4 — Download ZIP (EPIC-4 / v4.6)
+
+| Prioridade | Feature | Esforço | Status |
+|-----------|---------|---------|--------|
+| Média | Download ZIP de seleção de fotos do catálogo | Médio | Pendente |
 
 ---
 
-*Atualizado em 05/06/2026 — v4.4 | Next.js 14 + Supabase + Cloudinary + Anthropic*
+*Atualizado em 06/06/2026 — v4.5 | Next.js 14 + Supabase + Cloudinary + Anthropic*

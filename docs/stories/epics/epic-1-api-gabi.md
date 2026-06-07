@@ -2,9 +2,9 @@
 
 **ID:** EPIC-1  
 **Fase:** 1 (v4.5)  
-**Status:** Draft  
+**Status:** Done  
 **Owner:** Morgan (PM)  
-**Data:** 2026-06-05  
+**Data:** 2026-06-05 → Concluído 2026-06-06  
 **PRD Ref:** PRD-lbg-catalogo.md §13 Fase 1  
 
 ---
@@ -23,7 +23,7 @@ O catálogo centraliza foto, dados técnicos e copies — eliminando retrabalho 
 ## Contexto do Sistema Existente
 
 - **Stack:** Next.js 14 + TypeScript + Supabase + Cloudinary + Anthropic (Claude Sonnet 4.6)
-- **Banco:** Tabela `produtos` com 435 registros, `usuarios` com RLS
+- **Banco:** Modelo produto-cêntrico (Story 1.5): `produtos` (1 row/SKU, ~426 SKUs) + `produto_imagens` (N fotos/SKU), `usuarios` com RLS
 - **Auth:** JWT customizado (jose) — role: admin/editor/viewer
 - **Middleware:** Edge Runtime com proteção por role
 - **URL produção:** https://lbg-next.vercel.app
@@ -180,15 +180,46 @@ CREATE TABLE produto_copies (
 
 ---
 
+### Story 1.5 — Refactor: Modelo Produto-Cêntrico ✅ Done
+
+**Tipo:** Refactor (DB + API)  
+**Executor:** `@dev`  
+**Quality Gate:** `@qa` + `@architect`  
+**Esforço:** Grande (8–12h)  
+**Status:** Done (2026-06-06)
+
+**Descrição:** Migração do modelo foto-cêntrico (1 linha/foto em `produtos`) para produto-cêntrico (1 linha/SKU em `produtos` + N fotos em `produto_imagens`). Motivação: custo excessivo em `generate-copies.ts` que iterava 896 fotos em vez de 426 SKUs.
+
+**O que foi entregue:**
+- [x] Tabela `produto_imagens` criada com FK `sku → produtos ON DELETE CASCADE`
+- [x] Tabela `produtos` refatorada: 1 row/SKU com campos derivados (`image_url`, `qualidade_foto`, `precisa_revisao` da melhor foto)
+- [x] Smart PATCH handler: separa `PHOTO_KEYS` e `MASTER_KEYS`, atualiza tabela correta
+- [x] `GET /api/produtos` retorna produtos com `imagens[]` embutidas via join em memória
+- [x] `GET /api/produto-imagens` usa two-query join (sem PostgREST relation embedding)
+- [x] `/relatorio` métricas corrigidas para agregar de `imagens[]`
+- [x] `/editar` removidos campos foto-nível do formulário (SKU read-only)
+- [x] `material_aparente = "vidro"` adicionado em 4 lugares (type, 2 UIs, prompt IA)
+- [x] Migration `003-material-vidro-pastilhas.sql` corrigiu pastilhas de vidro com material "outro"
+- [x] Commit `f2083cc` (Story 1.5) + `4e384a3` (material vidro) pushados para origin/main
+
+**Backlog pós-deploy (não bloqueante):**
+- Auth nos endpoints `PATCH/DELETE /api/produtos/[sku]` (ampliado pelo CASCADE)
+- Drop `produtos_legacy` após 48h de validação
+- Índice `idx_produto_imagens_criado_em` antes de ~5.000 fotos
+- Paginação em `GET /api/produtos` antes de ~2.000 SKUs
+
+---
+
 ## Definition of Done
 
-- [ ] Stories 1.1 e 1.2 implementadas (API Gabi + enriquecimento marketing)
-- [ ] Story 1.3 executada por Ana Paula (usuários criados, senha trocada)
-- [ ] Story 1.4 implementada (tabela copies + script + página admin + endpoints)
-- [ ] 435 produtos com `descricao_marketing` enriquecida
-- [ ] 435 × 5 = 2.175 copies SEO gerados e armazenados
-- [ ] lint e typecheck passando
-- [ ] PRD atualizado para v4.5
+- [x] Stories 1.1 e 1.2 implementadas (API Gabi + enriquecimento marketing)
+- [x] Story 1.3 executada por Ana Paula (usuários criados, senha trocada)
+- [x] Story 1.4 implementada (tabela copies + script + página admin + endpoints)
+- [x] Story 1.5 implementada (modelo produto-cêntrico, duas tabelas, material vidro)
+- [x] lint e typecheck passando
+- [x] PRD atualizado para v4.5
+- [ ] 426 produtos com `descricao_marketing` enriquecida (Story 1.2 — pendente execução do script)
+- [ ] 426 × 5 = 2.130 copies SEO gerados e armazenados (Story 1.4 — pendente execução do script)
 
 ---
 

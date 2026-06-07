@@ -1,12 +1,14 @@
-# Epic 2 — Agenda de Conteúdo
+# Epic 2 — Agenda de Conteúdo ~~DESCARTADO~~
 
 **ID:** EPIC-2  
-**Fase:** 2 (v4.5)  
-**Status:** Draft  
+**Fase:** —  
+**Status:** Descartado em 2026-06-06  
 **Owner:** Morgan (PM)  
 **Data:** 2026-06-05  
-**PRD Ref:** PRD-lbg-catalogo.md §13 Fase 2  
-**Depende de:** EPIC-1 (Story 1.3 — Gabi cadastrada no sistema)
+
+> **Motivo do descarte:** A gestão de agenda de postagens é responsabilidade do agente Gabi — ela controla o calendário no próprio lado (CLI e, futuramente, sua própria UI). O lbg-next é **fonte de dados** (fotos, metadados, copies), não de gestão de agenda. Construir tabela e UI de agenda aqui seria duplicação de responsabilidade.
+>
+> Mantido para referência histórica. Não implementar.
 
 ---
 
