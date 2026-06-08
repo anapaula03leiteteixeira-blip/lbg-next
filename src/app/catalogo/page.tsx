@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import AppLayout from "@/components/layout/AppLayout";
 import type { Produto, ProdutoImagem, Categoria, Qualidade } from "@/types";
 import { Search, SlidersHorizontal, X, ChevronDown, ChevronLeft, ChevronRight, AlertTriangle, Download } from "lucide-react";
+import { SkuCopiesDetail } from "@/components/copies/SkuCopiesDetail";
 
 const CATEGORIAS: Categoria[] = ["cuba","sanitario","pastilha","flexivel","rejunte","acessorio","outro"];
 const QUALIDADES: Qualidade[] = ["excelente","boa","regular","ruim"];
@@ -59,7 +60,7 @@ function SkeletonCard() {
 
 function ProductModal({
   allPhotos,
-  onClose,
+  onClose: onCloseProp,
   onRevisar,
 }: {
   allPhotos: ProdutoImagem[];
@@ -68,6 +69,12 @@ function ProductModal({
 }) {
   const [idx,         setIdx]         = useState(0);
   const [downloading, setDownloading] = useState(false);
+  const [activeTab,   setActiveTab]   = useState<'detalhes' | 'copies'>('detalhes');
+
+  const onClose = useCallback(() => {
+    setActiveTab('detalhes');
+    onCloseProp();
+  }, [onCloseProp]);
 
   // Ordenar: melhores fotos primeiro
   const QUAL_ORDER: Record<string, number> = { excelente:0, boa:1, regular:2, ruim:3 };
@@ -164,6 +171,32 @@ function ProductModal({
           </div>
         </div>
 
+        {/* Tabs */}
+        <div style={{ display:'flex', borderBottom:'1px solid #e7e5e4', padding:'0 1.5rem' }}>
+          {(['detalhes', 'copies'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                padding:'0.625rem 1rem',
+                fontSize:'0.85rem',
+                fontWeight: activeTab === tab ? 600 : 400,
+                color: activeTab === tab ? '#1c1917' : '#78716c',
+                borderBottom: activeTab === tab ? '2px solid #b45309' : '2px solid transparent',
+                background:'none',
+                border:'none',
+                borderTop:'none',
+                borderLeft:'none',
+                borderRight:'none',
+                cursor:'pointer',
+              }}
+            >
+              {tab === 'detalhes' ? '📋 Detalhes' : '🏷️ Copies SEO'}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === 'detalhes' && (
         <div className="modal-body" style={{ padding: "1rem 1.5rem 1.5rem" }}>
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:"1.5rem" }}>
 
@@ -327,6 +360,13 @@ function ProductModal({
             </div>
           </div>
         </div>
+        )}
+
+        {activeTab === 'copies' && (
+          <div className="modal-body" style={{ padding:"1rem 1.5rem 1.5rem", background:"#292524", minHeight:200 }}>
+            <SkuCopiesDetail sku={rep.sku} />
+          </div>
+        )}
       </div>
     </div>
   );
