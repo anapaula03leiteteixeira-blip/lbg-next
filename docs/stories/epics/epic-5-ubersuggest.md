@@ -1,44 +1,39 @@
-# Epic 5 — Enriquecimento com Ubersuggest
+# Epic 5 — Copies SEO Multi-Plataforma (Claude-Direct)
 
 **ID:** EPIC-5  
-**Fase:** 3 (v4.5)  
+**Fase:** 3 (v4.5 → v4.6)  
 **Status:** Draft  
 **Owner:** Morgan (PM)  
-**Data:** 2026-06-06  
-**Depende de:** Configuração do MCP Ubersuggest via `@devops`
+**Data:** 2026-06-07 (revisado — pivot de Ubersuggest para Claude-Direct)  
+**Depende de:** EPIC-1 Done (script `generate-copies.ts` + tabela `produto_copies` já existem)
 
 ---
 
 ## Epic Goal
 
-Usar o MCP Ubersuggest — que monitora o site da La Bella Griffe — para mapear palavras-chave com volume de busca real e aplicá-las no enriquecimento de `descricao_marketing` e na geração de copies SEO por plataforma. Substitui a abordagem anterior (Claude Vision em lote) por dados de demanda real.
+Gerar copies SEO otimizados para 5 plataformas (ML, Shopee, Amazon, Leroy Merlin, Madeira Madeira) usando Claude como engine principal de keywords + copies. Substitui a dependência do Ubersuggest MCP (OAuth bloqueante, sem API pública para ML/Shopee) por uma abordagem Claude-direct que usa os metadados do produto para gerar keywords relevantes e copies convertedores por plataforma em uma única chamada.
+
+**Por que Claude-direct?**
+- ML e Shopee não têm API pública de sugestão de keywords
+- Ubersuggest MCP requer OAuth interativo — inviável em pipeline automatizada
+- Claude já conhece padrões de SEO para e-commerce BR e limites de cada plataforma
+- `generate-copies.ts` já existe (EPIC-1) — só precisa de upgrade de prompts
 
 ---
 
 ## Contexto do Sistema Existente
 
-- **Scripts prontos (EPIC-1):** `scripts/enrich-marketing.ts` e `scripts/generate-copies.ts` existem mas nunca foram executados
-- **Tabela `produto_copies`:** Schema criado (EPIC-1 Story 1.4), aguarda dados
-- **Ubersuggest MCP:** `https://ubersuggest-mcp.neilpatelapi.com/mcp` — monitora site La Bella
-- **~426 SKUs** em `produtos`, maioria com `descricao_marketing` vazia ou fraca
-
----
-
-## Pré-requisito Operacional
-
-Antes de iniciar qualquer story deste epic, rodar via `@devops`:
-
-```bash
-claude mcp add ubersuggest \
-  --transport http \
-  https://ubersuggest-mcp.neilpatelapi.com/mcp
-```
+- **Script pronto:** `scripts/generate-copies.ts` — nunca executado, aguarda upgrade de prompts
+- **Tabela `produto_copies`:** Schema criado (EPIC-1 Story 1.4), vazia, aguarda dados
+- **~426 SKUs** em `produtos` com metadados (nome, categoria, material, cor, tags)
+- **ANTHROPIC_API_KEY** configurada no `.env.local`
+- **UI `/admin/copies`** já existe para visualizar o resultado
 
 ---
 
 ## Stories
 
-### Story 5.1 — Mapeamento de Keywords La Bella via Ubersuggest
+### Story 5.1 — Upgrade de Prompts SEO em generate-copies.ts
 
 **Tipo:** Research + Script  
 **Executor:** `@dev`  
