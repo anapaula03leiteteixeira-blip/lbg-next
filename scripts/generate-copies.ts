@@ -32,9 +32,9 @@ const EST_OUT  = 300;
 const COPY_LIMITS: Record<Plataforma, { titulo: number; bullets?: { count: number; chars: number }; descricao: number }> = {
   amazon:          { titulo: 200, bullets: { count: 5,  chars: 255 }, descricao: 2000 },
   mercado_livre:   { titulo: 60,                                       descricao: 4000 },
-  shopee:          { titulo: 120,                                      descricao: 3000 },
-  leroy_merlin:    { titulo: 100, bullets: { count: 10, chars: 200 }, descricao: 1000 },
-  madeira_madeira: { titulo: 150,                                      descricao: 2000 },
+  shopee:          { titulo: 58,                                       descricao: 3000 },
+  leroy_merlin:    { titulo: 120, bullets: { count: 10, chars: 200 }, descricao: 280  },
+  madeira_madeira: { titulo: 120,                                      descricao: 2000 },
 };
 
 // ── Clients ────────────────────────────────────────────────────────────────
@@ -59,7 +59,7 @@ interface ProdutoDB {
   cor_dominante?: string | null;
   material_aparente?: string | null;
   tags?: string[] | null;
-  descricao_marketing: string;
+  descricao_marketing: string | null;
   descricao_tecnica?: string | null;
 }
 
@@ -68,19 +68,21 @@ interface CopyRaw {
   bullets?: string[];
   descricao?: string;
   palavras_chave?: string[];
+  ficha_tecnica_hints?: string[];
+  backend_keywords?: string;
 }
 
 // ── Prompts ────────────────────────────────────────────────────────────────
 function contextoBase(p: ProdutoDB): string {
   return [
-    `Marca: La Bella Griffe`,
+    `Marca: La Bella Griffe — louças e metais sanitários de origem italiana. Fabricados com porcelana vitrificada de alta resistência. Posicionamento: qualidade premium a preço acessível. Garantia de fábrica. Distribuição nacional.`,
     `Produto: ${p.nome_produto}`,
     `Categoria: ${p.categoria}`,
     p.subcategoria      ? `Subcategoria: ${p.subcategoria}`        : null,
     p.cor_dominante     ? `Cor/Acabamento: ${p.cor_dominante}`     : null,
     p.material_aparente ? `Material: ${p.material_aparente}`       : null,
     p.tags?.length      ? `Tags: ${p.tags.join(", ")}`             : null,
-    `Descrição marketing: ${p.descricao_marketing}`,
+    p.descricao_marketing ? `Descrição marketing: ${p.descricao_marketing}` : null,
     p.descricao_tecnica ? `Descrição técnica: ${p.descricao_tecnica}` : null,
   ].filter(Boolean).join("\n");
 }
@@ -88,16 +90,16 @@ function contextoBase(p: ProdutoDB): string {
 function buildPrompt(plat: Plataforma, p: ProdutoDB): string {
   const ctx = contextoBase(p);
   switch (plat) {
-    case "amazon":
-      return `${ctx}\n\nGere um listing otimizado para Amazon Brasil. Responda APENAS em JSON válido:\n{"titulo":"≤200 chars, marca+produto+material+diferencial, palavras-chave no início","bullets":["BENEFÍCIO EM MAIÚSCULA: detalhe ≤255 chars","...x5"],"descricao":"HTML com <p><ul><li>, ≤2000 chars, tom persuasivo e técnico","palavras_chave":["5-10 termos de busca backend"]}`;
     case "mercado_livre":
-      return `${ctx}\n\nGere listing para Mercado Livre Brasil. Responda APENAS em JSON válido:\n{"titulo":"≤60 chars, direto: Marca+produto+material, sem emojis","descricao":"≤4000 chars, atributos técnicos+diferenciais+aplicação+garantia","palavras_chave":["5-8 termos"]}`;
+      return `${ctx}\n\nGere listing para Mercado Livre Brasil. JSON:\n{"titulo":"≤60 chars — [Produto] [material] [cor/acabamento] — sem artigos, sem emojis","descricao":"3-4 frases convertendo quem já está na página: benefícios concretos, dimensões exatas, compatibilidade, facilidade de instalação. Tom direto e confiante.","palavras_chave":["5 termos que compradores digitam no ML — do mais específico ao mais amplo"],"ficha_tecnica_hints":["3 atributos-chave para preencher na ficha técnica ML"]}`;
     case "shopee":
-      return `${ctx}\n\nGere listing para Shopee Brasil. Responda APENAS em JSON válido:\n{"titulo":"≤120 chars com 3-5 emojis relevantes (💧🚿🏠✨🛁), tom informal e atraente","descricao":"≤3000 chars, repita palavras-chave 3-4x naturalmente, emojis no início dos parágrafos","palavras_chave":["5-8 termos"]}`;
+      return `${ctx}\n\nGere listing para Shopee Brasil. JSON:\n{"titulo":"≤58 chars — keyword principal NOS PRIMEIROS 15 CHARS (obrigatório, têm peso 3.2x no algoritmo). Sem keyword stuffing. Tom acessível.","descricao":"2-3 frases curtas — custo-benefício, qualidade, o que o comprador ganha. Tom acessível.","palavras_chave":["5 termos simples de alta intenção, como comprador Shopee buscaria"]}`;
+    case "amazon":
+      return `${ctx}\n\nGere listing para Amazon Brasil. JSON:\n{"titulo":"150-200 chars — começa com 'La Bella Griffe', inclui produto + material + dimensão + 2 diferenciais","bullets":["MATERIAL PREMIUM: <louça/porcelana vitrificada, resistência, acabamento>","DIMENSÕES EXATAS: <medidas para instalação sem surpresas>","INSTALAÇÃO FÁCIL: <compatibilidade, instruções, o que vem na caixa>","DESIGN ITALIANO: <estética, linha, combinação com outros produtos La Bella>","GARANTIA E QUALIDADE: <durabilidade, marca, suporte pós-venda>"],"descricao":"HTML com <p><ul><li> ≤2000 chars. Responde perguntas do comprador, quebra objeções, conduz à compra.","palavras_chave":["5-8 termos incluindo variações técnicas e sinônimos"],"backend_keywords":"string corrida com sinônimos variações de busca sem vírgula sem repetição"}`;
     case "leroy_merlin":
-      return `${ctx}\n\nGere listing para Leroy Merlin Brasil. Responda APENAS em JSON válido:\n{"titulo":"≤100 chars, técnico e objetivo","bullets":["Especificação: valor (ex: Material: louça vitrificada)","...até 10 itens: dimensões, material, acabamento, aplicação, garantia"],"descricao":"≤1000 chars, técnico e preciso","palavras_chave":["5-8 termos técnicos"]}`;
+      return `${ctx}\n\nGere listing para Leroy Merlin Brasil (perfil: reformador, profissional ou DIY). JSON:\n{"titulo":"80-120 chars — produto + material + dimensão + contexto de uso em reforma","descricao":"≤280 chars (LIMITE DA PLATAFORMA) — specs técnicas, compatibilidade, contexto de reforma, facilidade de instalação","palavras_chave":["5 termos com foco em reforma, instalação, compatibilidade"],"ficha_tecnica_hints":["3 atributos técnicos prioritários para Leroy"]}`;
     case "madeira_madeira":
-      return `${ctx}\n\nGere listing para MadeiraMadeira. Responda APENAS em JSON válido:\n{"titulo":"≤150 chars, inclua dimensões e material se disponíveis","descricao":"≤2000 chars, foco em ambiente de uso, dimensões, material, acabamento e instalação","palavras_chave":["5-8 termos"]}`;
+      return `${ctx}\n\nGere listing para MadeiraMadeira (perfil: decoração + reforma + entrega rápida). JSON:\n{"titulo":"80-120 chars — produto + estilo/design + cor + aplicação no ambiente","descricao":"≤2000 chars — design, qualidade visual, dimensões, como transforma o banheiro. Tom aspiracional mas direto.","palavras_chave":["5 termos com foco em design, ambiente, decoração de banheiro"]}`;
   }
 }
 
@@ -107,6 +109,7 @@ async function gerarCopy(anthropic: Anthropic, plat: Plataforma, p: ProdutoDB): 
     {
       model: "claude-sonnet-4-6",
       max_tokens: 1200,
+      system: "Você é um especialista em SEO para e-commerce brasileiro com foco em produtos de banheiro (cubas, torneiras, pastilhas, acessórios sanitários). Gere copies que maximizem visibilidade nas buscas E convertam vendas. Responda APENAS com JSON válido, sem texto adicional.",
       messages: [{ role: "user", content: [{ type: "text", text: buildPrompt(plat, p) }] }],
     },
     { signal: AbortSignal.timeout(30_000) },
@@ -148,8 +151,7 @@ async function main() {
   let query = sb
     .from("produtos")
     .select("sku, nome_produto, categoria, subcategoria, cor_dominante, material_aparente, tags, descricao_marketing, descricao_tecnica")
-    .not("descricao_marketing", "is", null)
-    .neq("descricao_marketing", "");
+    .not("nome_produto", "is", null);
 
   if (SKU_FILTER) query = query.eq("sku", SKU_FILTER);
 
@@ -159,7 +161,7 @@ async function main() {
   const produtos = (data ?? []) as ProdutoDB[];
 
   if (produtos.length === 0) {
-    console.log("✅ Nenhum produto elegível (sem descricao_marketing).");
+    console.log("✅ Nenhum produto elegível (sem nome_produto).");
     return;
   }
 
