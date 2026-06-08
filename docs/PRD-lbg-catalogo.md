@@ -1,7 +1,7 @@
 # PRD — La Bella Griffe: Sistema de Catálogo de Produtos
 
-**Versão:** 4.5
-**Data:** 2026-06-06
+**Versão:** 4.6 (rev 2)
+**Data:** 2026-06-08
 **Status:** Em produção
 **Owner:** Ana Paula Teixeira (anapaula03.leiteteixeira@gmail.com)
 **URL:** https://lbg-next.vercel.app
@@ -28,7 +28,8 @@ Usuários autenticados por email + senha com três perfis de acesso (admin, edit
 | v4.2 — Next.js | Upload em lote ZIP + dedup + catálogo LBG + melhorias catálogo | Substituído | 2026-06-05 |
 | v4.3 — Next.js | Correções UI: pastilha em todos os dropdowns, botão lote destacado, modal What's New, brand redesign (Playfair Display + paleta La Bella) | Substituído | 2026-06-05 |
 | v4.4 — Next.js | Sprint QA completo (H1–M5 + L1–L3): 10 bugs corrigidos no pipeline de upload. Multi-foto queue em Novo Produto. Instruções de uso em lote e individual. Correção CSS keyframes fadeUp. | Substituído | 2026-06-05 |
-| **v4.5 — Next.js** | **EPIC-1 completo: API Gabi (endpoints /api/gabi/*), enriquecimento descricao_marketing, copies SEO 5 plataformas, refactor modelo produto-cêntrico (produtos + produto_imagens), material "vidro" adicionado.** | **Em produção** | 2026-06-06 |
+| v4.5 — Next.js | EPIC-1 completo: API Gabi (endpoints /api/gabi/*), enriquecimento descricao_marketing, copies SEO 5 plataformas, refactor modelo produto-cêntrico (produtos + produto_imagens), material "vidro" adicionado. | Em produção | 2026-06-06 |
+| **v4.6 — Next.js** | **EPIC-5 Story 5.1: upgrade de prompts SEO (contexto de marca, prompts por plataforma, COPY_LIMITS corretos, fix 422 guard, todos os 129 SKUs elegíveis). Story 5.2: batch generation em execução (645 copies × 5 plataformas).** | **Em produção** | 2026-06-08 |
 
 ---
 
@@ -299,6 +300,36 @@ src/
 | processado_em | TIMESTAMPTZ | Data de processamento pela IA |
 | criado_em | TIMESTAMPTZ | Data de inserção no banco |
 
+### Tabela `produto_copies` (copies SEO — N rows/SKU × plataforma)
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | BIGSERIAL PK | ID auto-incremento |
+| sku | TEXT NOT NULL | SKU do produto (sem FK explícita — join manual) |
+| plataforma | TEXT | amazon / mercado_livre / shopee / leroy_merlin / madeira_madeira |
+| titulo | TEXT NOT NULL | Título SEO para a plataforma |
+| bullets | TEXT[] | Lista de benefícios (usado em Amazon) |
+| descricao | TEXT NOT NULL | Descrição completa formatada |
+| palavras_chave | TEXT[] | Keywords SEO extraídas |
+| gerado_em | TIMESTAMPTZ | Data de geração pelo Claude |
+| atualizado_em | TIMESTAMPTZ | Última edição manual |
+
+**RLS:** ativo. **UI:** `/admin/copies` para visualização e edição manual.
+
+### Tabela `auth_tokens` (tokens temporários de auth)
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | BIGSERIAL PK | ID auto-incremento |
+| email | TEXT | E-mail do destinatário |
+| token | TEXT UNIQUE | Token UUID aleatório |
+| tipo | TEXT | `reset_senha` / `magic_link` |
+| expira_em | TIMESTAMPTZ | Validade do token |
+| usado | BOOLEAN | Se já foi consumido |
+| criado_em | TIMESTAMPTZ | Data de criação |
+
+**RLS:** ativo desde 08/06/2026 (migration `enable_rls_auth_tokens`). Policy restritiva bloqueia `anon` e `authenticated` — apenas `service_role` tem acesso (server-side via `supabaseServer()`).
+
 ### Tabela `usuarios`
 
 | Campo | Tipo | Descrição |
@@ -312,7 +343,7 @@ src/
 | criado_em | TIMESTAMPTZ | Data de criação |
 | ultimo_acesso | TIMESTAMPTZ | Atualizado a cada login |
 
-**RLS:** ambas as tabelas têm Row Level Security ativo. `usuarios` bloqueia acesso anon — apenas service role key (server-side) pode ler/escrever.
+**RLS:** todas as tabelas com RLS ativo. `usuarios` e `auth_tokens` bloqueiam acesso anon/authenticated — apenas service role key (server-side) pode ler/escrever. `auth_tokens` teve RLS habilitado em 08/06/2026 via migration `enable_rls_auth_tokens`.
 
 **Supabase Project ID:** `fjzcypjldbxkcumydyzp`
 
@@ -476,7 +507,8 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision). Migrado pa
 | Cloudinary signed URLs com `expires_at` | CDN rejeita URL após timestamp — controle de acesso real sem migrar para `type:authenticated` |
 | `throw` fora de handlers → validação dentro do handler | `throw` em nível de módulo quebra cold start de qualquer rota que importe o módulo |
 | Agenda de conteúdo fora do lbg-next | Gabi gerencia o calendário no próprio agente — lbg-next é fonte de dados, não de gestão de agenda |
-| Ubersuggest MCP para enriquecimento (em vez de Claude Vision em lote) | Keywords com volume de busca real do site La Bella > descrições genéricas geradas por imagem |
+| Ubersuggest descartado → Claude-Direct | Keywords do site La Bella relevantes, mas dependência externa. Claude gera copies SEO direto dos metadados com qualidade equivalente e zero custo extra |
+| RLS em `auth_tokens` (08/06/2026) | Tabela exposta ao anon desde criação (EPIC-0). Corrigido com policy restritiva + `service_role` bypass. Sem impacto operacional pois toda leitura/escrita já usava `supabaseServer()` |
 
 ---
 
@@ -502,7 +534,7 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision). Migrado pa
 | Alta | Endpoint `/api/gabi/produtos` com filtros otimizados para Gabi | Pequeno | **Concluído v4.5** |
 | Alta | Endpoint `/api/gabi/produto/[sku]` — detalhe completo por SKU | Pequeno | **Concluído v4.5** |
 | Média | Enriquecer `descricao_marketing` dos produtos (Claude Vision em lote) | Médio | **Concluído v4.5** (script pronto, execução pendente) |
-| Alta | Copies SEO 5 plataformas (`produto_copies` + admin UI + endpoints) | Grande | **Concluído v4.5** (script pronto, execução pendente) |
+| Alta | Copies SEO 5 plataformas (`produto_copies` + admin UI + endpoints) | Grande | **Concluído v4.6** (EPIC-5 Story 5.1: prompts upgraded, 126 copies gerados na 1ª rodada; Story 5.2: batch completo em execução) |
 | Média | Gestão de acesso humano via `/admin` | Imediato | **Concluído v4.5** |
 | Alta | Refactor modelo produto-cêntrico (`produtos` + `produto_imagens`) | Grande | **Concluído v4.5** |
 | Alta | Material "vidro" + migration pastilhas | Pequeno | **Concluído v4.5** |
@@ -518,16 +550,26 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision). Migrado pa
 | Alta | `*buscar-produto {SKU}` no agente Gabi → dados completos do produto | Médio | Pendente |
 | Alta | `*fotos {SKU}` → Cloudinary como fonte primária de imagens para artes | Pequeno | Pendente |
 
-### Fase 3 — Enriquecimento com Ubersuggest (EPIC-5 / v4.5)
+### Fase 3 — Copies SEO Multi-Plataforma Claude-Direct (EPIC-5 / v4.6)
+
+> **Decisão 08/06/2026:** Ubersuggest descartado. Claude gera copies SEO diretamente a partir dos metadados do produto (nome, categoria, material, cor, tags, descrição). Sem dependência de keyword tool externa.
 
 | Prioridade | Feature | Esforço | Status |
 |-----------|---------|---------|--------|
-| Alta | Configurar MCP Ubersuggest (monitora site La Bella) | Imediato | Pendente |
-| Alta | Mapear keywords reais por categoria → `keyword-map.json` | Pequeno | Pendente |
-| Alta | Enriquecer `descricao_marketing` com keywords Ubersuggest + Claude | Médio | Pendente |
-| Alta | Gerar copies SEO por plataforma com keywords reais | Médio | Pendente |
+| Alta | Story 5.1 — Upgrade prompts SEO: contexto de marca, prompts por plataforma (ML/Shopee/Amazon/Leroy/Madeira), COPY_LIMITS corretos, fix guard 422, todos 129 SKUs elegíveis | Médio | **Concluído v4.6** |
+| Alta | Story 5.2 — Batch generation: 129 SKUs × 5 plataformas = 645 copies, batch 8 paralelos, max_tokens Amazon 1800 | Médio | **Ready** (pendente execução) |
+| Média | Story 5.3 — Validação manual de amostra: 10 SKUs revisados, ajustes de prompt se necessário | Pequeno | Pendente |
 
-### Fase 4 — Download ZIP (EPIC-4 / v4.6)
+### Fase 3 — Copies SEO no Detalhe do Produto (EPIC-6 / v4.7)
+
+> **EPIC-6 — UX: Fluidez & Integração SEO** — criado em 08/06/2026.
+
+| Prioridade | Feature | Esforço | Status |
+|-----------|---------|---------|--------|
+| Média | Story 6.1 — Login com campo de e-mail unificado: `email` compartilhado entre senha / magic link / reset | Pequeno | **Ready for Review** |
+| Alta | Story 6.2 — Copies SEO visíveis no modal de detalhe do produto (`/catalogo`) | Médio | **Ready** |
+
+### Fase 4 — Download ZIP (EPIC-4 / v4.x)
 
 | Prioridade | Feature | Esforço | Status |
 |-----------|---------|---------|--------|
@@ -535,4 +577,12 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision). Migrado pa
 
 ---
 
-*Atualizado em 06/06/2026 — v4.5 | Next.js 14 + Supabase + Cloudinary + Anthropic*
+## 14. Segurança — Histórico de Correções
+
+| Data | Ação | Tabela | Detalhe |
+|------|------|--------|---------|
+| 08/06/2026 | RLS habilitado | `auth_tokens` | Migration `enable_rls_auth_tokens`: policy restritiva bloqueia `anon`/`authenticated`; `service_role` mantém acesso completo |
+
+---
+
+*Atualizado em 08/06/2026 — v4.6 rev 2 | Next.js 14 + Supabase + Cloudinary + Anthropic*

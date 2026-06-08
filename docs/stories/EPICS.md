@@ -4,7 +4,7 @@
 **Sistema em produção:** https://lbg-next.vercel.app  
 **Versão atual:** v4.5  
 **Última atualização:** 2026-06-06
-**Versão:** v4.5 (EPIC-0 Done, EPIC-1 Done — EPIC-2 próximo)  
+**Versão:** v4.6 (EPIC-0 Done, EPIC-1 Done, EPIC-5 Story 5.1 Done — EPIC-6 em andamento)  
 
 ---
 
@@ -34,7 +34,8 @@ EPIC-2 → DESCARTADO (agenda gerenciada pela Gabi, não pelo lbg-next)
 | EPIC-2 | Agenda de Conteúdo | — | **Descartado** | — | [epic-2-agenda-conteudo.md](epics/epic-2-agenda-conteudo.md) |
 | EPIC-3 | Integração Gabi ↔ lbg-next | 2 / v4.5 | Draft | 2 | [epic-3-integracao-gabi.md](epics/epic-3-integracao-gabi.md) |
 | EPIC-5 | Enriquecimento com Ubersuggest | 3 / v4.5 | Draft | 3 | [epic-5-ubersuggest.md](epics/epic-5-ubersuggest.md) |
-| EPIC-4 | Download ZIP de Fotos | 4 / v4.6 | Draft | 1 | [epic-4-pipeline-canva.md](epics/epic-4-pipeline-canva.md) |
+| EPIC-4 | Download ZIP de Fotos | 4 / v4.x | Draft | 1 | [epic-4-pipeline-canva.md](epics/epic-4-pipeline-canva.md) |
+| EPIC-6 | UX: Fluidez & Integração SEO | 3 / v4.7 | **Em andamento** | 2 | — |
 
 ---
 
@@ -83,3 +84,7 @@ Padrão de nome: `{epicNum}.{storyNum}.story.md`
 | 1.5 Refactor modelo produto-cêntrico | [1.5.refactor-produto-imagens.story.md](active/1.5.refactor-produto-imagens.story.md) | **Done** |
 | 3.1 Gabi buscar-produto | — | **Próxima** |
 | 3.3 Gabi fotos Cloudinary | — | **Próxima** |
+| 5.1 Upgrade prompts SEO | [5.1.upgrade-prompts-seo-generate-copies.story.md](active/5.1.upgrade-prompts-seo-generate-copies.story.md) | **Done** |
+| 5.2 Batch copies 129 SKUs × 5 plataformas | [5.2.executar-copies-lote-426-skus.story.md](active/5.2.executar-copies-lote-426-skus.story.md) | **Ready** |
+| 6.1 Login e-mail unificado | [6.1.login-email-unificado.story.md](active/6.1.login-email-unificado.story.md) | **Ready for Review** |
+| 6.2 Copies SEO no detalhe do produto | [6.2.copies-seo-no-detalhe-produto.story.md](active/6.2.copies-seo-no-detalhe-produto.story.md) | **Ready** |

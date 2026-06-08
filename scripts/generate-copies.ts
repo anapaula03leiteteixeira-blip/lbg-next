@@ -19,9 +19,9 @@ const PLAT_FILTER = platIdx !== -1 ? args[platIdx + 1] ?? null : null;
 const PLATAFORMAS = ["amazon", "mercado_livre", "shopee", "leroy_merlin", "madeira_madeira"] as const;
 type Plataforma   = typeof PLATAFORMAS[number];
 
-// Batch = 10 produtos (50 req simultâneas: 10 × 5 plataformas)
-const BATCH_PRODUTOS   = 10;
-const BATCH_DELAY_MS   = 55_000; // ~60 req/min
+// 8 pares simultâneos → ~8 req/burst, respeita 50 req/min
+const BATCH_PRODUTOS   = 8;
+const BATCH_DELAY_MS   = 12_000; // 12s entre batches de 8
 
 // Custo estimado (texto-only): $3/1M input + $15/1M output
 const COST_IN  = 3  / 1_000_000;
@@ -108,7 +108,7 @@ async function gerarCopy(anthropic: Anthropic, plat: Plataforma, p: ProdutoDB): 
   const res = await anthropic.messages.create(
     {
       model: "claude-sonnet-4-6",
-      max_tokens: 1200,
+      max_tokens: plat === "amazon" ? 1800 : 1200,
       system: "Você é um especialista em SEO para e-commerce brasileiro com foco em produtos de banheiro (cubas, torneiras, pastilhas, acessórios sanitários). Gere copies que maximizem visibilidade nas buscas E convertam vendas. Responda APENAS com JSON válido, sem texto adicional.",
       messages: [{ role: "user", content: [{ type: "text", text: buildPrompt(plat, p) }] }],
     },
@@ -203,10 +203,10 @@ async function main() {
 
     console.log("");
 
-    // Processar pares em batches de 50
+    // Processar pares em batches de BATCH_PRODUTOS
     let totalOk = 0, totalErros = 0;
     const batches: typeof pares[] = [];
-    for (let i = 0; i < pares.length; i += 50) batches.push(pares.slice(i, i + 50));
+    for (let i = 0; i < pares.length; i += BATCH_PRODUTOS) batches.push(pares.slice(i, i + BATCH_PRODUTOS));
 
     for (let bi = 0; bi < batches.length; bi++) {
       const batch = batches[bi];
