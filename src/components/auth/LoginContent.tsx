@@ -138,7 +138,7 @@ export default function LoginContent() {
           {!showMagic ? (
             <button
               type="button"
-              onClick={() => setShowMagic(true)}
+              onClick={() => { setShowMagic(true); if (email) setMagicEmail(email); }}
               style={{
                 width:"100%",
                 padding:"0.65rem 1rem",
@@ -193,7 +193,7 @@ export default function LoginContent() {
           {!showReset ? (
             <button
               type="button"
-              onClick={() => setShowReset(true)}
+              onClick={() => { setShowReset(true); if (email) setResetEmail(email); }}
               style={{ background:"none", border:"none", color:"#a78bfa", cursor:"pointer", fontSize:"0.85rem", textDecoration:"underline" }}
             >
               Esqueci minha senha
