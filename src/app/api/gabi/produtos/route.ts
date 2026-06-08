@@ -33,11 +33,16 @@ export async function GET(req: NextRequest) {
     const categoriaParam = searchParams.get("categoria");
     const qualidadeParam = searchParams.get("qualidade_foto");
     const precisaRevisao = searchParams.get("precisa_revisao");
+    const qParam         = searchParams.get("q");
     const limitParam     = searchParams.get("limit");
     const offsetParam    = searchParams.get("offset");
+    const pageParam      = searchParams.get("page");
 
-    const limit  = Math.min(Math.max(parseInt(limitParam  ?? "50", 10) || 50, 1), 200);
-    const offset = Math.max(parseInt(offsetParam ?? "0", 10) || 0, 0);
+    const limit  = Math.min(Math.max(parseInt(limitParam ?? "50", 10) || 50, 1), 200);
+    // ?page= é alias de offset para compatibilidade com Pix Agent (ProductData contract)
+    const offset = pageParam
+      ? (Math.max(parseInt(pageParam, 10) || 1, 1) - 1) * limit
+      : Math.max(parseInt(offsetParam ?? "0", 10) || 0, 0);
 
     if (categoriaParam && !CATEGORIAS.includes(categoriaParam as Categoria)) {
       return NextResponse.json(
@@ -62,6 +67,7 @@ export async function GET(req: NextRequest) {
       .order("criado_em", { ascending: false });
 
     if (categoriaParam) prodQuery = prodQuery.eq("categoria", categoriaParam);
+    if (qParam) prodQuery = prodQuery.ilike("nome_produto", `%${qParam}%`);
 
     const { data: prods, error: prodErr } = await prodQuery;
     if (prodErr) throw prodErr;
