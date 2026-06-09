@@ -99,7 +99,7 @@ export interface FiltrosProduto {
 }
 
 // ── Copies SEO ────────────────────────────────────────────────────────────────
-export type Plataforma = "amazon" | "mercado_livre" | "shopee" | "leroy_merlin" | "madeira_madeira";
+export type Plataforma = "amazon" | "mercado_livre" | "shopee" | "leroy_merlin" | "madeira_madeira" | "nuvemshop";
 
 export interface ProdutoCopy {
   id:             number;
@@ -119,6 +119,7 @@ export const COPY_LIMITS: Record<Plataforma, { titulo: number; bullets?: { count
   shopee:          { titulo: 58,                                       descricao: 3000 },
   leroy_merlin:    { titulo: 120, bullets: { count: 10, chars: 200 }, descricao: 280  },
   madeira_madeira: { titulo: 120,                                      descricao: 2000 },
+  nuvemshop:       { titulo: 255,                                      descricao: 10000 },
 };
 
 export const PLATAFORMA_LABEL: Record<Plataforma, string> = {
@@ -127,7 +128,32 @@ export const PLATAFORMA_LABEL: Record<Plataforma, string> = {
   shopee:          "Shopee",
   leroy_merlin:    "Leroy Merlin",
   madeira_madeira: "MadeiraMadeira",
+  nuvemshop:       "Nuvemshop",
 };
+
+// ── SEO Metadata ──────────────────────────────────────────────────────────────
+export interface ProductSeoMeta {
+  id:                   string;
+  sku:                  string;
+  nuvemshop_title:      string | null;
+  nuvemshop_description: string | null;
+  meta_title:           string | null;  // max 70 chars
+  meta_description:     string | null;  // max 160 chars
+  alt_text:             string | null;  // max 125 chars
+  keywords:             string[] | null;
+  keyword_data:         Record<string, unknown> | null;
+  enriched_at:          string;
+  enriched_by:          string;
+}
+
+export interface KeywordInfo {
+  keyword:    string;
+  volume:     number;
+  sd:         number;   // SEO difficulty
+  cpc:        number;
+}
+
+export type SeoCategoria = "cuba" | "pastilha" | "porcelanato" | "torneira" | "revestimento" | "acessorio" | "sanitario" | "outro";
 
 // ── Classificação IA ──────────────────────────────────────────────────────────
 export interface ClassificacaoIA {

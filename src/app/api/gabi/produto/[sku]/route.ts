@@ -52,7 +52,14 @@ export async function GET(
 
     if (imgErr) throw imgErr;
 
-    return NextResponse.json({ ...produto, imagens: imagens ?? [] });
+    // Buscar metadados SEO (opcional — null se ainda não enriquecido)
+    const { data: seoData } = await sb
+      .from("product_seo")
+      .select("nuvemshop_title, meta_title, meta_description, alt_text, keywords")
+      .eq("sku", sku)
+      .maybeSingle();
+
+    return NextResponse.json({ ...produto, imagens: imagens ?? [], seo: seoData ?? null });
   } catch (e: unknown) {
     const msg = e instanceof Error
       ? e.message

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "enrich-seo": "ts-node --project tsconfig.scripts.json scripts/enrich-seo.ts",
+    "enrich-marketing": "ts-node --project tsconfig.scripts.json scripts/enrich-marketing.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.21.0",

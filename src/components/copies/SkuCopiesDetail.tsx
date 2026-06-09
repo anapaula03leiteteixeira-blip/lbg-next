@@ -10,6 +10,7 @@ export const PLAT_COLOR: Record<Plataforma, string> = {
   shopee:          "#EE4D2D",
   leroy_merlin:    "#78BE20",
   madeira_madeira: "#1C5E8C",
+  nuvemshop:       "#5C6BC0",
 };
 
 const DESC_PREVIEW_CHARS = 80;

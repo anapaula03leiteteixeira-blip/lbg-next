@@ -48,6 +48,8 @@ function buildPrompt(plataforma: Plataforma, p: ProdutoDB): string {
       return `${ctx}\n\nGere listing para Leroy Merlin Brasil (perfil: reformador, profissional ou DIY). JSON:\n{"titulo":"80-120 chars — produto + material + dimensão + contexto de uso em reforma","descricao":"≤280 chars (LIMITE DA PLATAFORMA) — specs técnicas, compatibilidade, contexto de reforma, facilidade de instalação","palavras_chave":["5 termos com foco em reforma, instalação, compatibilidade"],"ficha_tecnica_hints":["3 atributos técnicos prioritários para Leroy"]}`;
     case "madeira_madeira":
       return `${ctx}\n\nGere listing para MadeiraMadeira (perfil: decoração + reforma + entrega rápida). JSON:\n{"titulo":"80-120 chars — produto + estilo/design + cor + aplicação no ambiente","descricao":"≤2000 chars — design, qualidade visual, dimensões, como transforma o banheiro. Tom aspiracional mas direto.","palavras_chave":["5 termos com foco em design, ambiente, decoração de banheiro"]}`;
+    case "nuvemshop":
+      return `${ctx}\n\nGere listing para loja própria Nuvemshop La Bella Griffe. JSON:\n{"titulo":"máx 255 chars — nome completo + acabamento + dimensão + La Bella Griffe","descricao":"HTML com <p><ul><li> — 300-600 chars — benefícios, specs, CTA elegante. Tom sofisticado La Bella Griffe.","palavras_chave":["5 keywords SEO de alta relevância para o produto"]}`;
   }
 }
 
