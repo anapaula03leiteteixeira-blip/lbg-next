@@ -29,7 +29,8 @@ Usuários autenticados por email + senha com três perfis de acesso (admin, edit
 | v4.3 — Next.js | Correções UI: pastilha em todos os dropdowns, botão lote destacado, modal What's New, brand redesign (Playfair Display + paleta La Bella) | Substituído | 2026-06-05 |
 | v4.4 — Next.js | Sprint QA completo (H1–M5 + L1–L3): 10 bugs corrigidos no pipeline de upload. Multi-foto queue em Novo Produto. Instruções de uso em lote e individual. Correção CSS keyframes fadeUp. | Substituído | 2026-06-05 |
 | v4.5 — Next.js | EPIC-1 completo: API Gabi (endpoints /api/gabi/*), enriquecimento descricao_marketing, copies SEO 5 plataformas, refactor modelo produto-cêntrico (produtos + produto_imagens), material "vidro" adicionado. | Em produção | 2026-06-06 |
-| **v4.6 — Next.js** | **EPIC-5 Story 5.1: upgrade de prompts SEO (contexto de marca, prompts por plataforma, COPY_LIMITS corretos, fix 422 guard, todos os 129 SKUs elegíveis). Story 5.2: batch generation em execução (645 copies × 5 plataformas).** | **Em produção** | 2026-06-08 |
+| v4.6 — Next.js | EPIC-5 Story 5.1: upgrade de prompts SEO (contexto de marca, prompts por plataforma, COPY_LIMITS corretos, fix 422 guard, todos os 129 SKUs elegíveis). Story 5.2: batch generation em execução (645 copies × 5 plataformas). | Em produção | 2026-06-08 |
+| **v4.7 — Next.js** | **SEO Enrichment (LBG-SEO-1.1): tabela `product_seo` + CLI `enrich-seo` + API `/api/seo/enrich` + suporte à plataforma `nuvemshop` em `produto_copies`. Keywords via Ubersuggest MCP. Copy gerado por Claude Sonnet 4.6.** | **Em produção** | 2026-06-09 |
 
 ---
 
@@ -232,6 +233,7 @@ src/
 │   │   ├── gabi/produtos/      → GET: lista otimizada para agente Gabi
 │   │   ├── gabi/produto/[sku]/ → GET: detalhe completo por SKU
 │   │   ├── copies/             → GET: lista copies | PATCH: edita copy
+│   │   ├── seo/enrich/         → POST: gera SEO copy via Claude + salva product_seo
 │   │   └── upload/             → POST: Cloudinary + Claude Vision → produto_imagens
 │   ├── admin/                  → gestão de usuários (admin only)
 │   ├── catalogo/               → galeria com modal multi-foto
@@ -306,7 +308,7 @@ src/
 |-------|------|-----------|
 | id | BIGSERIAL PK | ID auto-incremento |
 | sku | TEXT NOT NULL | SKU do produto (sem FK explícita — join manual) |
-| plataforma | TEXT | amazon / mercado_livre / shopee / leroy_merlin / madeira_madeira |
+| plataforma | TEXT | amazon / mercado_livre / shopee / leroy_merlin / madeira_madeira / **nuvemshop** |
 | titulo | TEXT NOT NULL | Título SEO para a plataforma |
 | bullets | TEXT[] | Lista de benefícios (usado em Amazon) |
 | descricao | TEXT NOT NULL | Descrição completa formatada |
@@ -315,6 +317,24 @@ src/
 | atualizado_em | TIMESTAMPTZ | Última edição manual |
 
 **RLS:** ativo. **UI:** `/admin/copies` para visualização e edição manual.
+
+### Tabela `product_seo` (metadados SEO — 1 row/SKU) — v4.7
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| id | UUID PK | `gen_random_uuid()` |
+| sku | TEXT NOT NULL → FK `produtos.sku` ON DELETE CASCADE | Produto |
+| nuvemshop_title | TEXT | Título da página — max 255 chars |
+| nuvemshop_description | TEXT | Descrição HTML completa |
+| meta_title | TEXT | Google snippet — max 70 chars |
+| meta_description | TEXT | Google snippet — max 160 chars |
+| alt_text | TEXT | Alt text de imagem — max 125 chars |
+| keywords | TEXT[] | Keywords SEO usadas na geração |
+| keyword_data | JSONB | Dados brutos do Ubersuggest (vol, sd, cpc) |
+| enriched_at | TIMESTAMPTZ | Data de enriquecimento |
+| enriched_by | TEXT | `cli` ou `api` |
+
+**RLS:** SELECT público, INSERT/UPDATE via service role (bypass). **CLI:** `npm run enrich-seo [--sku X] [--categoria X] [--force] [--dry-run]`. **API:** `POST /api/seo/enrich` (X-API-Key auth).
 
 ### Tabela `auth_tokens` (tokens temporários de auth)
 
@@ -507,7 +527,8 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision). Migrado pa
 | Cloudinary signed URLs com `expires_at` | CDN rejeita URL após timestamp — controle de acesso real sem migrar para `type:authenticated` |
 | `throw` fora de handlers → validação dentro do handler | `throw` em nível de módulo quebra cold start de qualquer rota que importe o módulo |
 | Agenda de conteúdo fora do lbg-next | Gabi gerencia o calendário no próprio agente — lbg-next é fonte de dados, não de gestão de agenda |
-| Ubersuggest descartado → Claude-Direct | Keywords do site La Bella relevantes, mas dependência externa. Claude gera copies SEO direto dos metadados com qualidade equivalente e zero custo extra |
+| Ubersuggest para keyword research + Claude para copy | LBG-SEO-1.1: Ubersuggest MCP usado para coletar dados de volume/dificuldade por categoria (mapa estático em `src/lib/seo/keyword-map.ts`). Claude gera o texto final usando as keywords como contexto. Volumes: "cuba inox cozinha" 8.1k/mês, "pastilha de vidro" 6.6k/mês. |
+| `product_seo` separada de `produto_copies` | SEO on-page (meta, alt, keywords) pertence a `product_seo`. Copy de canal (título/descrição por plataforma) pertence a `produto_copies`. Nuvemshop como plataforma em `produto_copies` é text — sem migration de enum. |
 | RLS em `auth_tokens` (08/06/2026) | Tabela exposta ao anon desde criação (EPIC-0). Corrigido com policy restritiva + `service_role` bypass. Sem impacto operacional pois toda leitura/escrita já usava `supabaseServer()` |
 
 ---
@@ -560,7 +581,15 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision). Migrado pa
 | Alta | Story 5.2 — Batch generation: 129 SKUs × 5 plataformas = 645 copies, batch 8 paralelos, max_tokens Amazon 1800 | Médio | **Ready** (pendente execução) |
 | Média | Story 5.3 — Validação manual de amostra: 10 SKUs revisados, ajustes de prompt se necessário | Pequeno | Pendente |
 
-### Fase 3 — Copies SEO no Detalhe do Produto (EPIC-6 / v4.7)
+### Fase 3 — SEO Enrichment Nuvemshop (LBG-SEO / v4.7) ✅ Done
+
+| Prioridade | Feature | Esforço | Status |
+|-----------|---------|---------|--------|
+| Alta | LBG-SEO-1.1 — `product_seo` table + CLI `enrich-seo` + API `/api/seo/enrich` + nuvemshop em `produto_copies` | Médio | **Concluído v4.7** |
+| Média | LBG-SEO-1.2 — Webhook automático ao criar produto (pós-upload) | Pequeno | Pendente |
+| Média | LBG-SEO-1.3 — UI admin para revisar/editar copy gerado | Médio | Pendente |
+
+### Fase 3 — Copies SEO no Detalhe do Produto (EPIC-6 / v4.8)
 
 > **EPIC-6 — UX: Fluidez & Integração SEO** — criado em 08/06/2026.
 
@@ -585,4 +614,4 @@ Processado em 03/06/2026 via `organizer.py` (Python + Claude Vision). Migrado pa
 
 ---
 
-*Atualizado em 08/06/2026 — v4.6 rev 2 | Next.js 14 + Supabase + Cloudinary + Anthropic*
+*Atualizado em 09/06/2026 — v4.7 | Next.js 14 + Supabase + Cloudinary + Anthropic + Ubersuggest*
