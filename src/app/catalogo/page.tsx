@@ -9,6 +9,21 @@ import { SkuCopiesDetail } from "@/components/copies/SkuCopiesDetail";
 const CATEGORIAS: Categoria[] = ["cuba","sanitario","pastilha","flexivel","rejunte","acessorio","outro"];
 const QUALIDADES: Qualidade[] = ["excelente","boa","regular","ruim"];
 
+type SortMode = 'api' | 'nome-az' | 'qualidade-asc' | 'fotos-desc' | 'revisao-first';
+const QUAL_SORT: Record<string, number> = { ruim: 0, regular: 1, boa: 2, excelente: 3 };
+function applySortMode(list: Produto[], mode: SortMode): Produto[] {
+  switch (mode) {
+    case 'nome-az':       return [...list].sort((a, b) => a.nome_produto.localeCompare(b.nome_produto));
+    case 'qualidade-asc': return [...list].sort((a, b) => (QUAL_SORT[a.qualidade_foto ?? ''] ?? 4) - (QUAL_SORT[b.qualidade_foto ?? ''] ?? 4));
+    case 'fotos-desc':    return [...list].sort((a, b) => (b.imagens?.length ?? 1) - (a.imagens?.length ?? 1));
+    case 'revisao-first': return [...list].sort((a, b) => {
+      if (a.precisa_revisao === b.precisa_revisao) return a.nome_produto.localeCompare(b.nome_produto);
+      return a.precisa_revisao ? -1 : 1;
+    });
+    default: return list;
+  }
+}
+
 const QUAL_BADGE: Record<string, string> = {
   excelente: "badge-excelente", boa: "badge-boa",
   regular:   "badge-regular",   ruim: "badge-ruim",
@@ -69,6 +84,7 @@ function ProductModal({
 }) {
   const [idx,         setIdx]         = useState(0);
   const [downloading, setDownloading] = useState(false);
+  const [downloadMsg, setDownloadMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [activeTab,   setActiveTab]   = useState<'detalhes' | 'copies'>('detalhes');
 
   const onClose = useCallback(() => {
@@ -112,8 +128,11 @@ function ProductModal({
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(link.href);
+      setDownloadMsg({ type: 'success', text: '✓ Foto baixada' });
+      setTimeout(() => setDownloadMsg(null), 2500);
     } catch {
-      alert("Não foi possível baixar a foto. Tente novamente.");
+      setDownloadMsg({ type: 'error', text: 'Não foi possível baixar. Tente novamente.' });
+      setTimeout(() => setDownloadMsg(null), 4000);
     } finally {
       setDownloading(false);
     }
@@ -161,18 +180,6 @@ function ProductModal({
                 style={{ background:"#fef3c7", color:"#92400e", border:"1px solid #fcd34d", fontWeight:600 }}
               >
                 <AlertTriangle size={13} /> Revisar esta foto
-              </button>
-            )}
-            {active.image_url && (
-              <button
-                onClick={() => downloadFoto(active)}
-                disabled={downloading}
-                className="btn btn-outline btn-sm"
-                title="Baixar foto selecionada"
-                style={{ display:"flex", alignItems:"center", gap:5 }}
-              >
-                <Download size={14} />
-                {downloading ? "Baixando..." : "Baixar foto"}
               </button>
             )}
             <button onClick={onClose} className="btn btn-ghost btn-sm"><X size={18} /></button>
@@ -235,9 +242,6 @@ function ProductModal({
                       onClick={next} disabled={idx === total - 1}
                       style={{ position:"absolute", right:8, top:"50%", transform:"translateY(-50%)", background:"rgba(255,255,255,0.9)", border:"1px solid #e7e5e4", borderRadius:6, padding:"6px", cursor:"pointer", opacity: idx === total - 1 ? 0.3 : 1 }}
                     ><ChevronRight size={18} /></button>
-                    <div style={{ position:"absolute", bottom:8, left:"50%", transform:"translateX(-50%)", background:"rgba(0,0,0,0.55)", color:"white", fontSize:"0.72rem", borderRadius:4, padding:"2px 8px" }}>
-                      {idx + 1} / {total}
-                    </div>
                   </>
                 )}
 
@@ -270,6 +274,13 @@ function ProductModal({
                   </button>
                 )}
               </div>
+
+              {/* Toast de download */}
+              {downloadMsg && (
+                <div style={{ marginTop: 6, padding: '5px 10px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 500, background: downloadMsg.type === 'success' ? '#d1fae5' : '#fef3c7', color: downloadMsg.type === 'success' ? '#065f46' : '#92400e' }}>
+                  {downloadMsg.text}
+                </div>
+              )}
 
               {/* Thumbnails strip */}
               {total > 1 && (
@@ -324,6 +335,13 @@ function ProductModal({
                       </div>
                     </button>
                   ))}
+                </div>
+              )}
+
+              {/* Contador consolidado */}
+              {total > 1 && (
+                <div style={{ fontSize: '0.72rem', color: '#a8a29e', marginTop: 4 }}>
+                  {idx + 1} / {total} · Use ← →
                 </div>
               )}
 
@@ -387,7 +405,7 @@ function ProductModal({
               )}
 
               <div style={{ marginTop:"auto", paddingTop:"0.5rem", borderTop:"1px solid #f5f5f4", fontSize:"0.72rem", color:"#a8a29e" }}>
-                {total} foto{total !== 1 ? "s" : ""} · Use ← → ou clique nos thumbnails
+                {total} foto{total !== 1 ? "s" : ""}
               </div>
             </div>
           </div>
@@ -417,6 +435,7 @@ export default function CatalogoPage() {
   const [selectedSku, setSelectedSku] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode,    setViewMode]    = useState<"grid"|"table">("grid");
+  const [sortMode,    setSortMode]    = useState<SortMode>('api');
 
   useEffect(() => {
     fetch("/api/produtos")
@@ -441,8 +460,8 @@ export default function CatalogoPage() {
     return true;
   });
 
-  // 1 produto por SKU (já garantido pela API)
-  const unique = filtered;
+  // 1 produto por SKU (já garantido pela API), com sort aplicado
+  const unique = applySortMode(filtered, sortMode);
 
   // Imagens do SKU selecionado para o modal
   const selectedProduto = selectedSku ? produtos.find(p => p.sku === selectedSku) : null;
@@ -456,14 +475,26 @@ export default function CatalogoPage() {
 
   function toggleCat(c: Categoria)  { setCatSel(prev  => prev.includes(c)  ? prev.filter(x => x !== c)  : [...prev, c]);  }
   function toggleQual(q: Qualidade) { setQualSel(prev  => prev.includes(q)  ? prev.filter(x => x !== q)  : [...prev, q]);  }
-  const clearFilters = () => { setSearch(""); setCatSel([]); setQualSel([]); setRevisaoOnly(false); };
+  const clearFilters = () => { setSearch(""); setCatSel([]); setQualSel([]); setRevisaoOnly(false); setSortMode('api'); };
   const hasFilters = search || catSel.length || qualSel.length || revisaoOnly;
 
   return (
     <AppLayout>
       <div className="topbar">
         <h1 className="page-title">Catálogo</h1>
-        <div style={{ display:"flex", gap:"0.5rem" }}>
+        <div style={{ display:"flex", gap:"0.5rem", alignItems:"center" }}>
+          <select
+            value={sortMode}
+            onChange={e => setSortMode(e.target.value as SortMode)}
+            className="btn btn-outline btn-sm"
+            style={{ cursor:'pointer', fontFamily:'inherit' }}
+          >
+            <option value="api">Padrão</option>
+            <option value="nome-az">Nome A→Z</option>
+            <option value="qualidade-asc">Qualidade ↑ (piores primeiro)</option>
+            <option value="fotos-desc">Mais fotos</option>
+            <option value="revisao-first">Revisão pendente primeiro</option>
+          </select>
           <button
             className="btn btn-outline btn-sm"
             onClick={() => setViewMode("grid")}
