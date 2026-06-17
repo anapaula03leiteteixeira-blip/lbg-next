@@ -4,7 +4,7 @@
 **Sistema em produção:** https://lbg-next.vercel.app  
 **Versão atual:** v4.5  
 **Última atualização:** 2026-06-17
-**Versão:** v4.7 (EPIC-0/1/6 Done, EPIC-5 Story 5.1+5.2 Done, EPIC-7 2/4 em andamento)  
+**Versão:** v4.8 (EPIC-0/1/6 Done, EPIC-5 Story 5.1+5.2 Done, EPIC-7 4/4 Done)  
 
 ---
 
@@ -36,7 +36,7 @@ EPIC-2 → DESCARTADO (agenda gerenciada pela Gabi, não pelo lbg-next)
 | EPIC-5 | Enriquecimento com Ubersuggest | 3 / v4.5 | Draft | 3 | [epic-5-ubersuggest.md](epics/epic-5-ubersuggest.md) |
 | EPIC-4 | Download ZIP de Fotos | 4 / v4.x | Draft | 1 | [epic-4-pipeline-canva.md](epics/epic-4-pipeline-canva.md) |
 | EPIC-6 | UX: Fluidez & Integração SEO | 3 / v4.7 | **Done** | 2/2 | — |
-| EPIC-7 | UX Galeria & Catálogo | 4 / v4.8 | **Em andamento** | 2/4 | [epic-7-ux-galeria-catalogo.md](epics/epic-7-ux-galeria-catalogo.md) |
+| EPIC-7 | UX Galeria & Catálogo | 4 / v4.8 | **Done** | 4/4 | [epic-7-ux-galeria-catalogo.md](epics/epic-7-ux-galeria-catalogo.md) |
 
 ---
 
@@ -91,5 +91,5 @@ Padrão de nome: `{epicNum}.{storyNum}.story.md`
 | 6.2 Copies SEO no detalhe do produto | [6.2.copies-seo-no-detalhe-produto.story.md](completed/6.2.copies-seo-no-detalhe-produto.story.md) | **Done** |
 | 7.1 Ordenação inteligente de fotos na galeria | [7.1.ordenacao-fotos-galeria.story.md](active/7.1.ordenacao-fotos-galeria.story.md) | **Done** |
 | 7.2 Labels de ângulo nos thumbnails | [7.2.labels-angulo-thumbnails.story.md](active/7.2.labels-angulo-thumbnails.story.md) | **Done** |
-| 7.3 Ordenação de produtos no catálogo | [7.3.ordenacao-catalogo.story.md](active/7.3.ordenacao-catalogo.story.md) | **Draft** |
-| 7.4 UX polish — toast, contador e botão duplicado | [7.4.ux-polish-modal-galeria.story.md](active/7.4.ux-polish-modal-galeria.story.md) | **Draft** |
+| 7.3 Ordenação de produtos no catálogo | [7.3.ordenacao-catalogo.story.md](active/7.3.ordenacao-catalogo.story.md) | **Done** |
+| 7.4 UX polish — toast, contador e botão duplicado | [7.4.ux-polish-modal-galeria.story.md](active/7.4.ux-polish-modal-galeria.story.md) | **Done** |
