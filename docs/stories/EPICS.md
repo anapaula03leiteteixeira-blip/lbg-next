@@ -3,8 +3,8 @@
 **Projeto:** La Bella Griffe — Sistema de Catálogo  
 **Sistema em produção:** https://lbg-next.vercel.app  
 **Versão atual:** v4.5  
-**Última atualização:** 2026-06-06
-**Versão:** v4.6 (EPIC-0 Done, EPIC-1 Done, EPIC-5 Story 5.1 Done — EPIC-6 em andamento)  
+**Última atualização:** 2026-06-17
+**Versão:** v4.7 (EPIC-0/1/6 Done, EPIC-5 Story 5.1+5.2 Done, EPIC-7 2/4 em andamento)  
 
 ---
 
@@ -36,7 +36,7 @@ EPIC-2 → DESCARTADO (agenda gerenciada pela Gabi, não pelo lbg-next)
 | EPIC-5 | Enriquecimento com Ubersuggest | 3 / v4.5 | Draft | 3 | [epic-5-ubersuggest.md](epics/epic-5-ubersuggest.md) |
 | EPIC-4 | Download ZIP de Fotos | 4 / v4.x | Draft | 1 | [epic-4-pipeline-canva.md](epics/epic-4-pipeline-canva.md) |
 | EPIC-6 | UX: Fluidez & Integração SEO | 3 / v4.7 | **Done** | 2/2 | — |
-| EPIC-7 | UX Galeria & Catálogo | 4 / v4.8 | **Em andamento** | 0/4 | [epic-7-ux-galeria-catalogo.md](epics/epic-7-ux-galeria-catalogo.md) |
+| EPIC-7 | UX Galeria & Catálogo | 4 / v4.8 | **Em andamento** | 2/4 | [epic-7-ux-galeria-catalogo.md](epics/epic-7-ux-galeria-catalogo.md) |
 
 ---
 
@@ -86,10 +86,10 @@ Padrão de nome: `{epicNum}.{storyNum}.story.md`
 | 3.1 Gabi buscar-produto | — | **Próxima** |
 | 3.3 Gabi fotos Cloudinary | — | **Próxima** |
 | 5.1 Upgrade prompts SEO | [5.1.upgrade-prompts-seo-generate-copies.story.md](completed/5.1.upgrade-prompts-seo-generate-copies.story.md) | **Done** |
-| 5.2 Batch copies 129 SKUs × 5 plataformas | [5.2.executar-copies-lote-426-skus.story.md](active/5.2.executar-copies-lote-426-skus.story.md) | **Ready** |
+| 5.2 Batch copies 129 SKUs × 5 plataformas | [5.2.executar-copies-lote-426-skus.story.md](completed/5.2.executar-copies-lote-426-skus.story.md) | **Done** |
 | 6.1 Login e-mail unificado | [6.1.login-email-unificado.story.md](completed/6.1.login-email-unificado.story.md) | **Done** |
 | 6.2 Copies SEO no detalhe do produto | [6.2.copies-seo-no-detalhe-produto.story.md](completed/6.2.copies-seo-no-detalhe-produto.story.md) | **Done** |
-| 7.1 Ordenação inteligente de fotos na galeria | [7.1.ordenacao-fotos-galeria.story.md](active/7.1.ordenacao-fotos-galeria.story.md) | **Ready** |
-| 7.2 Labels de ângulo nos thumbnails | [7.2.labels-angulo-thumbnails.story.md](active/7.2.labels-angulo-thumbnails.story.md) | **Ready** |
+| 7.1 Ordenação inteligente de fotos na galeria | [7.1.ordenacao-fotos-galeria.story.md](active/7.1.ordenacao-fotos-galeria.story.md) | **Done** |
+| 7.2 Labels de ângulo nos thumbnails | [7.2.labels-angulo-thumbnails.story.md](active/7.2.labels-angulo-thumbnails.story.md) | **Done** |
 | 7.3 Ordenação de produtos no catálogo | [7.3.ordenacao-catalogo.story.md](active/7.3.ordenacao-catalogo.story.md) | **Draft** |
 | 7.4 UX polish — toast, contador e botão duplicado | [7.4.ux-polish-modal-galeria.story.md](active/7.4.ux-polish-modal-galeria.story.md) | **Draft** |
