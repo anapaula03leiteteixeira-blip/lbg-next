@@ -76,11 +76,19 @@ function ProductModal({
     onCloseProp();
   }, [onCloseProp]);
 
-  // Ordenar: melhores fotos primeiro
+  // Ordenar: ângulo prioritário primeiro, qualidade como desempate
   const QUAL_ORDER: Record<string, number> = { excelente:0, boa:1, regular:2, ruim:3 };
-  const sorted = [...allPhotos].sort((a, b) =>
-    (QUAL_ORDER[a.qualidade_foto ?? "ruim"] ?? 9) - (QUAL_ORDER[b.qualidade_foto ?? "ruim"] ?? 9)
-  );
+  const ANGULO_ORDER: Record<string, number> = {
+    frontal: 0, perspectiva: 1, lateral: 2, superior: 3,
+    detalhe: 4, conjunto: 5, embalagem: 6,
+  };
+  const sorted = [...allPhotos].sort((a, b) => {
+    const aA = ANGULO_ORDER[a.angulo ?? ''] ?? 9;
+    const bA = ANGULO_ORDER[b.angulo ?? ''] ?? 9;
+    if (aA !== bA) return aA - bA;
+    return (QUAL_ORDER[a.qualidade_foto ?? 'ruim'] ?? 9)
+         - (QUAL_ORDER[b.qualidade_foto ?? 'ruim'] ?? 9);
+  });
 
   async function downloadFoto(foto: ProdutoImagem) {
     if (!foto.image_url) return;
@@ -273,23 +281,47 @@ function ProductModal({
                       title={foto.angulo ?? ""}
                       style={{
                         flexShrink: 0,
-                        width: 60, height: 60,
+                        width: 60,
+                        height: "auto",
                         borderRadius: 6,
-                        overflow: "hidden",
-                        border: i === idx ? "2px solid #b45309" : "2px solid transparent",
                         cursor: "pointer",
                         padding: 0,
-                        background: "#f5f5f4",
-                        position: "relative",
+                        background: "transparent",
+                        border: "none",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        gap: 2,
                       }}
                     >
-                      {imgUrl(foto.image_url, 120)
-                        ? <img src={imgUrl(foto.image_url, 120)!} alt={foto.angulo ?? ""} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
-                        : <span style={{ fontSize:"1.25rem", display:"flex", alignItems:"center", justifyContent:"center", height:"100%" }}>📷</span>
-                      }
-                      {foto.precisa_revisao && (
-                        <span style={{ position:"absolute", top:2, right:2, fontSize:"0.6rem" }}>⚠️</span>
-                      )}
+                      <div style={{
+                        width: 60, height: 60,
+                        borderRadius: 4,
+                        overflow: "hidden",
+                        border: i === idx ? "2px solid #b45309" : "2px solid transparent",
+                        background: "#f5f5f4",
+                        position: "relative",
+                      }}>
+                        {imgUrl(foto.image_url, 120)
+                          ? <img src={imgUrl(foto.image_url, 120)!} alt={foto.angulo ?? ""} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                          : <span style={{ fontSize:"1.25rem", display:"flex", alignItems:"center", justifyContent:"center", height:"100%" }}>📷</span>
+                        }
+                        {foto.precisa_revisao && (
+                          <span style={{ position:"absolute", top:2, right:2, fontSize:"0.6rem" }}>⚠️</span>
+                        )}
+                      </div>
+                      <div style={{
+                        fontSize: "0.55rem",
+                        textAlign: "center",
+                        color: "#78716c",
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                        maxWidth: 60,
+                        textTransform: "capitalize",
+                      }}>
+                        {foto.angulo ?? "—"}
+                      </div>
                     </button>
                   ))}
                 </div>

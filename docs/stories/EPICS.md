@@ -35,7 +35,8 @@ EPIC-2 → DESCARTADO (agenda gerenciada pela Gabi, não pelo lbg-next)
 | EPIC-3 | Integração Gabi ↔ lbg-next | 2 / v4.5 | Draft | 2 | [epic-3-integracao-gabi.md](epics/epic-3-integracao-gabi.md) |
 | EPIC-5 | Enriquecimento com Ubersuggest | 3 / v4.5 | Draft | 3 | [epic-5-ubersuggest.md](epics/epic-5-ubersuggest.md) |
 | EPIC-4 | Download ZIP de Fotos | 4 / v4.x | Draft | 1 | [epic-4-pipeline-canva.md](epics/epic-4-pipeline-canva.md) |
-| EPIC-6 | UX: Fluidez & Integração SEO | 3 / v4.7 | **Em andamento** | 2 | — |
+| EPIC-6 | UX: Fluidez & Integração SEO | 3 / v4.7 | **Done** | 2/2 | — |
+| EPIC-7 | UX Galeria & Catálogo | 4 / v4.8 | **Em andamento** | 0/4 | [epic-7-ux-galeria-catalogo.md](epics/epic-7-ux-galeria-catalogo.md) |
 
 ---
 
@@ -84,7 +85,11 @@ Padrão de nome: `{epicNum}.{storyNum}.story.md`
 | 1.5 Refactor modelo produto-cêntrico | [1.5.refactor-produto-imagens.story.md](active/1.5.refactor-produto-imagens.story.md) | **Done** |
 | 3.1 Gabi buscar-produto | — | **Próxima** |
 | 3.3 Gabi fotos Cloudinary | — | **Próxima** |
-| 5.1 Upgrade prompts SEO | [5.1.upgrade-prompts-seo-generate-copies.story.md](active/5.1.upgrade-prompts-seo-generate-copies.story.md) | **Done** |
+| 5.1 Upgrade prompts SEO | [5.1.upgrade-prompts-seo-generate-copies.story.md](completed/5.1.upgrade-prompts-seo-generate-copies.story.md) | **Done** |
 | 5.2 Batch copies 129 SKUs × 5 plataformas | [5.2.executar-copies-lote-426-skus.story.md](active/5.2.executar-copies-lote-426-skus.story.md) | **Ready** |
-| 6.1 Login e-mail unificado | [6.1.login-email-unificado.story.md](active/6.1.login-email-unificado.story.md) | **Ready for Review** |
-| 6.2 Copies SEO no detalhe do produto | [6.2.copies-seo-no-detalhe-produto.story.md](active/6.2.copies-seo-no-detalhe-produto.story.md) | **Ready** |
+| 6.1 Login e-mail unificado | [6.1.login-email-unificado.story.md](completed/6.1.login-email-unificado.story.md) | **Done** |
+| 6.2 Copies SEO no detalhe do produto | [6.2.copies-seo-no-detalhe-produto.story.md](completed/6.2.copies-seo-no-detalhe-produto.story.md) | **Done** |
+| 7.1 Ordenação inteligente de fotos na galeria | [7.1.ordenacao-fotos-galeria.story.md](active/7.1.ordenacao-fotos-galeria.story.md) | **Ready** |
+| 7.2 Labels de ângulo nos thumbnails | [7.2.labels-angulo-thumbnails.story.md](active/7.2.labels-angulo-thumbnails.story.md) | **Ready** |
+| 7.3 Ordenação de produtos no catálogo | [7.3.ordenacao-catalogo.story.md](active/7.3.ordenacao-catalogo.story.md) | **Draft** |
+| 7.4 UX polish — toast, contador e botão duplicado | [7.4.ux-polish-modal-galeria.story.md](active/7.4.ux-polish-modal-galeria.story.md) | **Draft** |
